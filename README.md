@@ -8,6 +8,7 @@ API REST de gestión de usuarios y control de acceso, desarrollada con Spring Bo
 - Inicio de sesión mediante identificador y contraseña.
 - Bloqueo del usuario al acumular tres contraseñas incorrectas.
 - Registro de los inicios de sesión exitosos en la tabla `user_log`.
+- Alta individual e importación CSV de patentes autorizadas.
 
 ## Tecnologías y requisitos
 
@@ -116,6 +117,35 @@ Cada contraseña incorrecta incrementa `blockAmount`. En el tercer fallo se camb
 
 Los intentos fallidos son acumulativos: un login exitoso no reinicia el contador. Solo los accesos exitosos generan un registro en `user_log`, con evento `0`, usuario y fecha de creación.
 
+### Cargar patentes
+
+La carga individual recibe una patente en JSON y devuelve el número guardado, normalizado en mayúsculas:
+
+```powershell
+$body = @{ numero = 'ab123cd' } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/patentes' -ContentType 'application/json' -Body $body
+```
+
+`POST /patentes` responde `201 Created` con `{"numero":"AB123CD"}`. Acepta letras latinas A-Z y números 0-9, de 1 a 16 caracteres. Elimina espacios al principio y al final; rechaza espacios internos, guiones, símbolos y valores vacíos con `400 Bad Request`. Una patente ya cargada, incluso con otra combinación de mayúsculas y minúsculas, devuelve `409 Conflict`.
+
+Para importar varias patentes, enviar un archivo CSV UTF-8 de **una columna** al campo `archivo` de `POST /patentes/importar`. Puede incluir una primera línea `patente`; después lleva una patente por línea:
+
+```text
+patente
+ABC123
+AB123CD
+```
+
+Ejemplo en PowerShell:
+
+```powershell
+curl.exe -F "archivo=@patentes.csv;type=text/csv" http://localhost:8080/patentes/importar
+```
+
+La respuesta exitosa es `201 Created` con `{"cantidad":2}`. El archivo admite hasta 100 KB y 1000 patentes. Se validan todas las filas y se detectan duplicados tanto dentro del archivo como en la base antes de guardar; si alguna falla, no se importa ninguna. Los errores de formato devuelven `400`, los duplicados `409` y los archivos que exceden el límite de carga de Spring `413`.
+
+La carga solo registra patentes. La consulta, modificación, baja y validación de acceso se implementarán por separado. Estos endpoints aún no tienen protección de autenticación.
+
 ## Compilación y pruebas
 
 En Windows:
@@ -130,7 +160,7 @@ En Linux o macOS:
 sh mvnw clean verify
 ```
 
-Las cinco pruebas actuales verifican el alta con estado inicial, el registro de un login exitoso, el bloqueo tras tres fallos, el rechazo de usuarios inexistentes y el mapper de credenciales. Utilizan repositorios simulados y no requieren MySQL; no prueban la conexión real a la base ni los endpoints por HTTP.
+Las pruebas de usuarios verifican el alta con estado inicial, el registro de un login exitoso, el bloqueo tras tres fallos, el rechazo de usuarios inexistentes y el mapper de credenciales. Las pruebas de patentes cubren normalización, formatos inválidos, duplicados, importación completa y respuestas HTTP. Utilizan repositorios simulados y no requieren MySQL; no prueban la conexión real a la base.
 
 El proceso genera un JAR ejecutable:
 
@@ -144,7 +174,7 @@ java -jar target/TFI-ControlAcceso-API-0.0.1-SNAPSHOT.jar
 src/main/java/com/unla/gestionUsuario/
   controller/                 Endpoints REST
   dtos/                       Datos de las peticiones
-  entities/                   Entidades User y UserLog
+  entities/                   Entidades User, UserLog y Patente
   exceptions/                 Errores de negocio
   mapper/                     Conversión entre DTO y entidad
   repository/                 Acceso a datos con Spring Data
