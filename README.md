@@ -142,7 +142,7 @@ Ejemplo en PowerShell:
 curl.exe -F "archivo=@patentes.csv;type=text/csv" http://localhost:8080/patentes/importar
 ```
 
-La respuesta exitosa es `201 Created` con `{"cantidad":2}`. El archivo admite hasta 100 KB y 1000 patentes. Se validan todas las filas y se detectan duplicados tanto dentro del archivo como en la base antes de guardar; si alguna falla, no se importa ninguna. Los errores de formato devuelven `400`, los duplicados `409` y los archivos que exceden el límite de carga de Spring `413`.
+La respuesta exitosa es `201 Created` con `{"cantidad":2}`. Por defecto, el archivo admite hasta 100000 bytes y 1000 patentes; esos límites se ajustan mediante `patentes.importacion.max-archivo-bytes` y `patentes.importacion.max-filas` en `application.properties`. Se validan todas las filas y se detectan duplicados tanto dentro del archivo como en la base antes de guardar; si alguna falla, no se importa ninguna. Los errores de formato devuelven `400`, los duplicados `409` y los archivos que exceden el límite de carga de Spring `413`.
 
 La carga solo registra patentes. La consulta, modificación, baja y validación de acceso se implementarán por separado. Estos endpoints aún no tienen protección de autenticación.
 

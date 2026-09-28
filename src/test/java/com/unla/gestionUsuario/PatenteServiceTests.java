@@ -30,7 +30,7 @@ class PatenteServiceTests {
     @BeforeEach
     void setUp() {
         repository = org.mockito.Mockito.mock(PatenteRepository.class);
-        service = new PatenteService(repository);
+        service = new PatenteService(repository, 100_000, 1_000);
     }
 
     @Test
@@ -91,6 +91,22 @@ class PatenteServiceTests {
         PatenteException existente = assertThrows(PatenteException.class,
                 () -> service.importar(csv("ABC123\nAB123CD\n")));
         assertEquals(Type.DUPLICADA, existente.getType());
+        verify(repository, never()).saveAll(any());
+    }
+
+    @Test
+    void respetaLosLimitesConfigurados() {
+        PatenteService limiteArchivo = new PatenteService(repository, 5, 1_000);
+        PatenteException archivoGrande = assertThrows(PatenteException.class,
+                () -> limiteArchivo.importar(csv("ABC123\n")));
+        assertEquals(Type.INVALIDA, archivoGrande.getType());
+        assertTrue(archivoGrande.getMessage().contains("5 bytes"));
+
+        PatenteService limiteFilas = new PatenteService(repository, 100, 1);
+        PatenteException demasiadasFilas = assertThrows(PatenteException.class,
+                () -> limiteFilas.importar(csv("ABC123\nAB123CD\n")));
+        assertEquals(Type.INVALIDA, demasiadasFilas.getType());
+        assertTrue(demasiadasFilas.getMessage().contains("(1)"));
         verify(repository, never()).saveAll(any());
     }
 

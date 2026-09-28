@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,13 +23,20 @@ import com.unla.gestionUsuario.service.IPatenteService;
 @Service
 public class PatenteService implements IPatenteService {
     private static final Pattern FORMATO = Pattern.compile("[A-Z0-9]{1,16}");
-    private static final long MAX_ARCHIVO_BYTES = 100_000;
-    private static final int MAX_FILAS = 1_000;
 
     private final PatenteRepository repository;
+    private final long maxArchivoBytes;
+    private final int maxFilas;
 
-    public PatenteService(PatenteRepository repository) {
+    public PatenteService(PatenteRepository repository,
+            @Value("${patentes.importacion.max-archivo-bytes}") long maxArchivoBytes,
+            @Value("${patentes.importacion.max-filas}") int maxFilas) {
+        if (maxArchivoBytes <= 0 || maxFilas <= 0) {
+            throw new IllegalArgumentException("Los límites de importación deben ser mayores que cero.");
+        }
         this.repository = repository;
+        this.maxArchivoBytes = maxArchivoBytes;
+        this.maxFilas = maxFilas;
     }
 
     @Override
@@ -47,8 +55,9 @@ public class PatenteService implements IPatenteService {
         if (archivo == null || archivo.isEmpty()) {
             throw new PatenteException(Type.INVALIDA, "El archivo CSV está vacío.");
         }
-        if (archivo.getSize() > MAX_ARCHIVO_BYTES) {
-            throw new PatenteException(Type.INVALIDA, "El archivo CSV supera los 100 KB.");
+        if (archivo.getSize() > maxArchivoBytes) {
+            throw new PatenteException(Type.INVALIDA,
+                    "El archivo CSV supera el límite de " + maxArchivoBytes + " bytes.");
         }
 
         String contenido;
@@ -74,8 +83,9 @@ public class PatenteService implements IPatenteService {
                 continue;
             }
             primeraFila = false;
-            if (numeros.size() >= MAX_FILAS) {
-                throw new PatenteException(Type.INVALIDA, "El archivo CSV supera las 1000 patentes.");
+            if (numeros.size() >= maxFilas) {
+                throw new PatenteException(Type.INVALIDA,
+                        "El archivo CSV supera el límite configurado de filas (" + maxFilas + ").");
             }
             String numero;
             try {
