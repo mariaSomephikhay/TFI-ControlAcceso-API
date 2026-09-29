@@ -11,6 +11,8 @@ public interface IUserMapper {
 	
 	@Mapping(target = "state", ignore = true)
 	@Mapping(target = "blockAmount", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
     User dtoToUser(UserDTO dto);
 
     UserDTO userToDto(User user);

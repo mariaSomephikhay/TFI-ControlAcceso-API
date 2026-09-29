@@ -43,7 +43,7 @@ public class PatenteService implements IPatenteService {
     @Transactional
     public Patente cargar(String numero) {
         String normalizado = normalizar(numero);
-        if (repository.existsById(normalizado)) {
+        if (repository.existsByNumero(normalizado)) {
             throw new PatenteException(Type.DUPLICADA, "La patente ya está cargada: " + normalizado);
         }
         return repository.save(new Patente(normalizado));
@@ -102,7 +102,7 @@ public class PatenteService implements IPatenteService {
             throw new PatenteException(Type.INVALIDA, "El archivo CSV no contiene patentes.");
         }
 
-        for (Patente existente : repository.findAllById(numeros)) {
+        for (Patente existente : repository.findAllByNumeroIn(numeros)) {
             throw new PatenteException(Type.DUPLICADA,
                     "La patente ya está cargada: " + existente.getNumero());
         }

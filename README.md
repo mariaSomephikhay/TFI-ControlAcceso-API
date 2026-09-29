@@ -42,6 +42,10 @@ RENAME TABLE `patente` TO `patentes`, `user` TO `users`, `user_log` TO `user_log
 
 Este cambio conserva los registros y la relación entre usuarios y accesos. `ddl-auto=update` no renombra tablas existentes por sí solo.
 
+Para una base que ya usa los nombres plurales pero fue creada antes de agregar el ID de `patentes` y las fechas de auditoría, detener la API y ejecutar una vez [la migración SQL](sql/2026-09-28-ids-y-auditoria.sql). El script conserva los registros, convierte `patentes.id` en clave primaria autogenerada y mantiene `numero` como valor único. En registros anteriores, las fechas de creación de patentes y usuarios reflejan el momento de la migración porque no existía ese dato histórico.
+
+`patentes.id` y `user_logs.id` se generan automáticamente. En `users`, el identificador de acceso `user_id` ya es la clave primaria. Las tres entidades completan `created_at` y `updated_at` mediante `@CreationTimestamp` y `@UpdateTimestamp`.
+
 Para usar otra conexión sin modificar el archivo, configurar las variables de entorno en la misma terminal de PowerShell desde la que se ejecutará la aplicación:
 
 ```powershell

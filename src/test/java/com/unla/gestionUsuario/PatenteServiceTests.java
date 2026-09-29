@@ -40,7 +40,7 @@ class PatenteServiceTests {
         Patente creada = service.cargar(" ab123cd ");
 
         assertEquals("AB123CD", creada.getNumero());
-        verify(repository).existsById("AB123CD");
+        verify(repository).existsByNumero("AB123CD");
         verify(repository).save(any(Patente.class));
     }
 
@@ -49,7 +49,7 @@ class PatenteServiceTests {
         PatenteException invalida = assertThrows(PatenteException.class, () -> service.cargar("AB-123"));
         assertEquals(Type.INVALIDA, invalida.getType());
 
-        when(repository.existsById("AB123CD")).thenReturn(true);
+        when(repository.existsByNumero("AB123CD")).thenReturn(true);
         PatenteException duplicada = assertThrows(PatenteException.class, () -> service.cargar("ab123cd"));
         assertEquals(Type.DUPLICADA, duplicada.getType());
         verify(repository, never()).save(any(Patente.class));
@@ -57,7 +57,7 @@ class PatenteServiceTests {
 
     @Test
     void importaCsvConEncabezadoYNormalizaTodasLasFilas() {
-        when(repository.findAllById(any())).thenReturn(List.of());
+        when(repository.findAllByNumeroIn(any())).thenReturn(List.of());
 
         int cantidad = service.importar(csv("\uFEFFpatente\n abc123 \n\"AB123CD\"\n"));
 
@@ -87,7 +87,7 @@ class PatenteServiceTests {
         assertEquals(Type.DUPLICADA, repetida.getType());
         verify(repository, never()).saveAll(any());
 
-        when(repository.findAllById(any())).thenReturn(List.of(new Patente("ABC123")));
+        when(repository.findAllByNumeroIn(any())).thenReturn(List.of(new Patente("ABC123")));
         PatenteException existente = assertThrows(PatenteException.class,
                 () -> service.importar(csv("ABC123\nAB123CD\n")));
         assertEquals(Type.DUPLICADA, existente.getType());
