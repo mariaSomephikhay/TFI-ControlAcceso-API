@@ -7,7 +7,7 @@ API REST de gestión de usuarios y control de acceso, desarrollada con Spring Bo
 - Alta de usuarios con estado activo y contador de intentos fallidos en cero.
 - Inicio de sesión mediante identificador y contraseña.
 - Bloqueo del usuario al acumular tres contraseñas incorrectas.
-- Registro de los inicios de sesión exitosos en la tabla `user_log`.
+- Registro de los inicios de sesión exitosos en la tabla `user_logs`.
 - Alta individual e importación CSV de patentes autorizadas.
 
 ## Tecnologías y requisitos
@@ -33,6 +33,14 @@ La configuración se encuentra en [application.properties](src/main/resources/ap
 | Gestión del esquema | `spring.jpa.hibernate.ddl-auto=update` |
 
 La URL incluye `createDatabaseIfNotExist=true`: la conexión puede crear la base si el usuario tiene permisos. Hibernate crea o actualiza las tablas al iniciar la aplicación. MySQL debe estar ejecutándose antes de iniciar la API.
+
+Las tablas de la aplicación se llaman `patentes`, `users` y `user_logs`. Si la base ya fue creada con los nombres anteriores, detener la API y ejecutar una vez en MySQL antes de iniciar esta versión:
+
+```sql
+RENAME TABLE `patente` TO `patentes`, `user` TO `users`, `user_log` TO `user_logs`;
+```
+
+Este cambio conserva los registros y la relación entre usuarios y accesos. `ddl-auto=update` no renombra tablas existentes por sí solo.
 
 Para usar otra conexión sin modificar el archivo, configurar las variables de entorno en la misma terminal de PowerShell desde la que se ejecutará la aplicación:
 
@@ -115,7 +123,7 @@ Si el usuario no existe, la contraseña es incorrecta o el usuario está bloquea
 
 Cada contraseña incorrecta incrementa `blockAmount`. En el tercer fallo se cambia `state` a `false`; esa petición todavía informa contraseña incorrecta. Las siguientes peticiones informan que el usuario está bloqueado, incluso si la contraseña es correcta.
 
-Los intentos fallidos son acumulativos: un login exitoso no reinicia el contador. Solo los accesos exitosos generan un registro en `user_log`, con evento `0`, usuario y fecha de creación.
+Los intentos fallidos son acumulativos: un login exitoso no reinicia el contador. Solo los accesos exitosos generan un registro en `user_logs`, con evento `0`, usuario y fecha de creación.
 
 ### Cargar patentes
 
