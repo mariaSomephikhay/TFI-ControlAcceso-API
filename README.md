@@ -34,7 +34,7 @@ La configuración se encuentra en [application.properties](src/main/resources/ap
 
 La URL incluye `createDatabaseIfNotExist=true`: la conexión puede crear la base si el usuario tiene permisos. Hibernate crea o actualiza las tablas al iniciar la aplicación. MySQL debe estar ejecutándose antes de iniciar la API.
 
-Las tablas de la aplicación se llaman `patentes`, `users` y `user_logs`. Si la base ya fue creada con los nombres anteriores, detener la API y ejecutar una vez en MySQL antes de iniciar esta versión:
+Las tablas de la aplicación se llaman `license_plates`, `users` y `user_logs`. Si la base ya fue creada con los nombres singulares anteriores, detener la API y renombrarlas antes de seguir con las migraciones:
 
 ```sql
 RENAME TABLE `patente` TO `patentes`, `user` TO `users`, `user_log` TO `user_logs`;
@@ -42,9 +42,9 @@ RENAME TABLE `patente` TO `patentes`, `user` TO `users`, `user_log` TO `user_log
 
 Este cambio conserva los registros y la relación entre usuarios y accesos. `ddl-auto=update` no renombra tablas existentes por sí solo.
 
-Para una base que ya usa los nombres plurales pero fue creada antes de agregar el ID de `patentes` y las fechas de auditoría, detener la API y ejecutar una vez [la migración SQL](sql/2026-09-28-ids-y-auditoria.sql). El script conserva los registros, convierte `patentes.id` en clave primaria autogenerada y mantiene `numero` como valor único. En registros anteriores, las fechas de creación de patentes y usuarios reflejan el momento de la migración porque no existía ese dato histórico.
+Para una base que usa `patentes` pero fue creada antes de agregarle ID y fechas de auditoría, ejecutar una vez [la migración de IDs y fechas](sql/2026-09-28-ids-y-auditoria.sql). Luego ejecutar [el cambio de nombre a inglés](sql/2026-09-28-rename-license-plates.sql), que conserva los registros y cambia la columna `numero` a `plate_number`. Si `patentes` ya tiene ID y fechas, ejecutar solo el cambio de nombre. `ddl-auto=update` no renombra tablas ni columnas por sí solo. En registros anteriores, las fechas de creación de patentes y usuarios reflejan el momento de la migración porque no existía ese dato histórico.
 
-`patentes.id` y `user_logs.id` se generan automáticamente. En `users`, el identificador de acceso `user_id` ya es la clave primaria. Las tres entidades completan `created_at` y `updated_at` mediante `@CreationTimestamp` y `@UpdateTimestamp`.
+`license_plates.id` y `user_logs.id` se generan automáticamente. En `users`, el identificador de acceso `user_id` ya es la clave primaria. Las tres entidades completan `created_at` y `updated_at` mediante `@CreationTimestamp` y `@UpdateTimestamp`.
 
 Para usar otra conexión sin modificar el archivo, configurar las variables de entorno en la misma terminal de PowerShell desde la que se ejecutará la aplicación:
 
@@ -131,6 +131,8 @@ Los intentos fallidos son acumulativos: un login exitoso no reinicia el contador
 
 ### Cargar patentes
 
+Las clases y la tabla usan `LicensePlate` y `license_plates`. La ruta HTTP y los campos JSON mantienen los nombres anteriores para conservar la compatibilidad con los clientes existentes.
+
 La carga individual recibe una patente en JSON y devuelve el número guardado, normalizado en mayúsculas:
 
 ```powershell
@@ -154,7 +156,7 @@ Ejemplo en PowerShell:
 curl.exe -F "archivo=@patentes.csv;type=text/csv" http://localhost:8080/patentes/importar
 ```
 
-La respuesta exitosa es `201 Created` con `{"cantidad":2}`. Por defecto, el archivo admite hasta 100000 bytes y 1000 patentes; esos límites se ajustan mediante `patentes.importacion.max-archivo-bytes` y `patentes.importacion.max-filas` en `application.properties`. Se validan todas las filas y se detectan duplicados tanto dentro del archivo como en la base antes de guardar; si alguna falla, no se importa ninguna. Los errores de formato devuelven `400`, los duplicados `409` y los archivos que exceden el límite de carga de Spring `413`.
+La respuesta exitosa es `201 Created` con `{"cantidad":2}`. Por defecto, el archivo admite hasta 100000 bytes y 1000 patentes; esos límites se ajustan mediante `license-plates.import.max-file-bytes` y `license-plates.import.max-rows` en `application.properties`. Se validan todas las filas y se detectan duplicados tanto dentro del archivo como en la base antes de guardar; si alguna falla, no se importa ninguna. Los errores de formato devuelven `400`, los duplicados `409` y los archivos que exceden el límite de carga de Spring `413`.
 
 La carga solo registra patentes. La consulta, modificación, baja y validación de acceso se implementarán por separado. Estos endpoints aún no tienen protección de autenticación.
 
@@ -186,7 +188,7 @@ java -jar target/TFI-ControlAcceso-API-0.0.1-SNAPSHOT.jar
 src/main/java/com/unla/gestionUsuario/
   controller/                 Endpoints REST
   dtos/                       Datos de las peticiones
-  entities/                   Entidades User, UserLog y Patente
+  entities/                   Entidades User, UserLog y LicensePlate
   exceptions/                 Errores de negocio
   mapper/                     Conversión entre DTO y entidad
   repository/                 Acceso a datos con Spring Data

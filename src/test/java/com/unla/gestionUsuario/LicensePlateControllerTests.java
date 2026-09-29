@@ -16,25 +16,25 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.unla.gestionUsuario.controller.PatenteController;
-import com.unla.gestionUsuario.entities.Patente;
-import com.unla.gestionUsuario.exceptions.PatenteException;
-import com.unla.gestionUsuario.exceptions.PatenteException.Type;
-import com.unla.gestionUsuario.service.IPatenteService;
+import com.unla.gestionUsuario.controller.LicensePlateController;
+import com.unla.gestionUsuario.entities.LicensePlate;
+import com.unla.gestionUsuario.exceptions.LicensePlateException;
+import com.unla.gestionUsuario.exceptions.LicensePlateException.Type;
+import com.unla.gestionUsuario.service.ILicensePlateService;
 
-class PatenteControllerTests {
-    private IPatenteService service;
+class LicensePlateControllerTests {
+    private ILicensePlateService service;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
-        service = org.mockito.Mockito.mock(IPatenteService.class);
-        mvc = MockMvcBuilders.standaloneSetup(new PatenteController(service)).build();
+        service = org.mockito.Mockito.mock(ILicensePlateService.class);
+        mvc = MockMvcBuilders.standaloneSetup(new LicensePlateController(service)).build();
     }
 
     @Test
-    void altaIndividualDevuelveCreadoYNumeroNormalizado() throws Exception {
-        when(service.cargar("ab123cd")).thenReturn(new Patente("AB123CD"));
+    void createReturnsNormalizedNumber() throws Exception {
+        when(service.create("ab123cd")).thenReturn(new LicensePlate("AB123CD"));
 
         mvc.perform(post("/patentes")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -44,11 +44,11 @@ class PatenteControllerTests {
     }
 
     @Test
-    void validacionYDuplicadoTienenEstadosDistintos() throws Exception {
-        when(service.cargar("AB-123"))
-                .thenThrow(new PatenteException(Type.INVALIDA, "Formato inválido"));
-        when(service.cargar("ABC123"))
-                .thenThrow(new PatenteException(Type.DUPLICADA, "Ya existe"));
+    void validationAndDuplicatesHaveDistinctStatuses() throws Exception {
+        when(service.create("AB-123"))
+                .thenThrow(new LicensePlateException(Type.INVALID, "Formato inválido"));
+        when(service.create("ABC123"))
+                .thenThrow(new LicensePlateException(Type.DUPLICATE, "Ya existe"));
 
         mvc.perform(post("/patentes").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"numero\":\"AB-123\"}"))
@@ -62,12 +62,12 @@ class PatenteControllerTests {
     }
 
     @Test
-    void importacionCsvDevuelveCantidad() throws Exception {
-        when(service.importar(any())).thenReturn(2);
-        MockMultipartFile archivo = new MockMultipartFile("archivo", "patentes.csv", "text/csv",
+    void csvImportReturnsCount() throws Exception {
+        when(service.importCsv(any())).thenReturn(2);
+        MockMultipartFile file = new MockMultipartFile("archivo", "patentes.csv", "text/csv",
                 "ABC123\nAB123CD\n".getBytes(StandardCharsets.UTF_8));
 
-        mvc.perform(multipart("/patentes/importar").file(archivo))
+        mvc.perform(multipart("/patentes/importar").file(file))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.cantidad").value(2));
     }

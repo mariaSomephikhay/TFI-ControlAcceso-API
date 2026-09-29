@@ -14,14 +14,14 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 
 @Entity
-@Table(name = "patentes", uniqueConstraints = @UniqueConstraint(name = "uk_patentes_numero", columnNames = "numero"))
-public class Patente {
+@Table(name = "license_plates", uniqueConstraints = @UniqueConstraint(name = "uk_license_plates_number", columnNames = "plate_number"))
+public class LicensePlate {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "numero", nullable = false, length = 16)
-    private String numero;
+    @Column(name = "plate_number", nullable = false, length = 16)
+    private String number;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -31,15 +31,15 @@ public class Patente {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
-    protected Patente() {
+    protected LicensePlate() {
     }
 
-    public Patente(String numero) {
-        this.numero = numero;
+    public LicensePlate(String number) {
+        this.number = number;
     }
 
-    public String getNumero() {
-        return numero;
+    public String getNumber() {
+        return number;
     }
 
     public Long getId() {

@@ -1,14 +1,14 @@
 package com.unla.gestionUsuario.exceptions;
 
-public class PatenteException extends RuntimeException {
+public class LicensePlateException extends RuntimeException {
     public enum Type {
-        INVALIDA,
-        DUPLICADA
+        INVALID,
+        DUPLICATE
     }
 
     private final Type type;
 
-    public PatenteException(Type type, String message) {
+    public LicensePlateException(Type type, String message) {
         super(message);
         this.type = type;
     }

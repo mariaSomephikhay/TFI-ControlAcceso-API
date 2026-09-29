@@ -13,50 +13,50 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.unla.gestionUsuario.dtos.ImportacionPatentesDTO;
-import com.unla.gestionUsuario.dtos.PatenteDTO;
-import com.unla.gestionUsuario.entities.Patente;
-import com.unla.gestionUsuario.exceptions.PatenteException;
-import com.unla.gestionUsuario.service.IPatenteService;
+import com.unla.gestionUsuario.dtos.LicensePlateImportDTO;
+import com.unla.gestionUsuario.dtos.LicensePlateDTO;
+import com.unla.gestionUsuario.entities.LicensePlate;
+import com.unla.gestionUsuario.exceptions.LicensePlateException;
+import com.unla.gestionUsuario.service.ILicensePlateService;
 
 @RestController
 @RequestMapping("/patentes")
-public class PatenteController {
-    private final IPatenteService service;
+public class LicensePlateController {
+    private final ILicensePlateService service;
 
-    public PatenteController(IPatenteService service) {
+    public LicensePlateController(ILicensePlateService service) {
         this.service = service;
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<PatenteDTO> cargar(@RequestBody PatenteDTO request) {
+    public ResponseEntity<LicensePlateDTO> create(@RequestBody LicensePlateDTO request) {
         if (request == null) {
-            throw new PatenteException(PatenteException.Type.INVALIDA, "La patente es obligatoria.");
+            throw new LicensePlateException(LicensePlateException.Type.INVALID, "La patente es obligatoria.");
         }
-        Patente patente = service.cargar(request.numero());
-        return ResponseEntity.status(HttpStatus.CREATED).body(new PatenteDTO(patente.getNumero()));
+        LicensePlate plate = service.create(request.number());
+        return ResponseEntity.status(HttpStatus.CREATED).body(new LicensePlateDTO(plate.getNumber()));
     }
 
     @PostMapping(value = "/importar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ImportacionPatentesDTO> importar(@RequestPart("archivo") MultipartFile archivo) {
+    public ResponseEntity<LicensePlateImportDTO> importCsv(@RequestPart("archivo") MultipartFile file) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new ImportacionPatentesDTO(service.importar(archivo)));
+                .body(new LicensePlateImportDTO(service.importCsv(file)));
     }
 
-    @ExceptionHandler(PatenteException.class)
-    public ResponseEntity<String> errorDePatente(PatenteException error) {
-        HttpStatus status = error.getType() == PatenteException.Type.DUPLICADA
+    @ExceptionHandler(LicensePlateException.class)
+    public ResponseEntity<String> handleLicensePlateError(LicensePlateException error) {
+        HttpStatus status = error.getType() == LicensePlateException.Type.DUPLICATE
                 ? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
         return ResponseEntity.status(status).body(error.getMessage());
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<String> patenteConcurrente() {
+    public ResponseEntity<String> handleConcurrentDuplicate() {
         return ResponseEntity.status(HttpStatus.CONFLICT).body("Una patente ya está cargada.");
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)
-    public ResponseEntity<String> archivoDemasiadoGrande() {
+    public ResponseEntity<String> handleOversizedFile() {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body("El archivo CSV es demasiado grande.");
     }
 }
