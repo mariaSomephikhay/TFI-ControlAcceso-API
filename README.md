@@ -34,15 +34,7 @@ La configuración se encuentra en [application.properties](src/main/resources/ap
 
 La URL incluye `createDatabaseIfNotExist=true`: la conexión puede crear la base si el usuario tiene permisos. Hibernate crea o actualiza las tablas al iniciar la aplicación. MySQL debe estar ejecutándose antes de iniciar la API.
 
-Las tablas de la aplicación se llaman `license_plates`, `users` y `user_logs`. Si la base ya fue creada con los nombres singulares anteriores, detener la API y renombrarlas antes de seguir con las migraciones:
-
-```sql
-RENAME TABLE `patente` TO `patentes`, `user` TO `users`, `user_log` TO `user_logs`;
-```
-
-Este cambio conserva los registros y la relación entre usuarios y accesos. `ddl-auto=update` no renombra tablas existentes por sí solo.
-
-Para una base que usa `patentes` pero fue creada antes de agregarle ID y fechas de auditoría, ejecutar una vez [la migración de IDs y fechas](sql/2026-09-28-ids-y-auditoria.sql). Luego ejecutar [el cambio de nombre a inglés](sql/2026-09-28-rename-license-plates.sql), que conserva los registros y cambia la columna `numero` a `plate_number`. Si `patentes` ya tiene ID y fechas, ejecutar solo el cambio de nombre. `ddl-auto=update` no renombra tablas ni columnas por sí solo. En registros anteriores, las fechas de creación de patentes y usuarios reflejan el momento de la migración porque no existía ese dato histórico.
+Las tablas de la aplicación se llaman `license_plates`, `users` y `user_logs`. En una base nueva, Hibernate las crea al iniciar la aplicación. `ddl-auto=update` conserva los datos entre ejecuciones, pero no renombra tablas ni columnas de versiones anteriores; una base existente con el esquema viejo requiere una migración manual para conservar sus registros.
 
 `license_plates.id` y `user_logs.id` se generan automáticamente. En `users`, el identificador de acceso `user_id` ya es la clave primaria. Las tres entidades completan `created_at` y `updated_at` mediante `@CreationTimestamp` y `@UpdateTimestamp`.
 
