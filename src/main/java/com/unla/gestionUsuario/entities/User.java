@@ -1,5 +1,10 @@
 package com.unla.gestionUsuario.entities;
 
+import java.time.LocalDateTime;
+
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -10,7 +15,7 @@ import lombok.Setter;
 
 @Entity 
 @Getter @Setter @NoArgsConstructor
-@Table(name="user")
+@Table(name="users")
 public class User {
 	@Id
 	@Column(name="user_id", nullable=false)
@@ -24,4 +29,12 @@ public class User {
 	
 	@Column(name="block_amount", nullable=false)
 	private int blockAmount;
+
+	@CreationTimestamp
+	@Column(name="created_at", nullable=false, updatable=false)
+	private LocalDateTime createdAt;
+
+	@UpdateTimestamp
+	@Column(name="updated_at", nullable=false)
+	private LocalDateTime updatedAt;
 }
