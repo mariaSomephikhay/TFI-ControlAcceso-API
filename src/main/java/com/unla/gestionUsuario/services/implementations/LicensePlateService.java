@@ -8,12 +8,14 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.unla.gestionUsuario.config.LicensePlateProperties;
 import com.unla.gestionUsuario.entities.LicensePlate;
 import com.unla.gestionUsuario.exceptions.LicensePlateException;
 import com.unla.gestionUsuario.exceptions.LicensePlateException.Type;
@@ -22,17 +24,30 @@ import com.unla.gestionUsuario.service.ILicensePlateService;
 
 @Service
 public class LicensePlateService implements ILicensePlateService {
-    private static final Pattern FORMAT = Pattern.compile("[A-Z0-9]{1,16}");
-
     private final LicensePlateRepository repository;
+    private final List<Pattern> patterns;
     private final long maxFileBytes;
     private final int maxRows;
 
     public LicensePlateService(LicensePlateRepository repository,
+            LicensePlateProperties properties,
             @Value("${license-plates.import.max-file-bytes}") long maxFileBytes,
             @Value("${license-plates.import.max-rows}") int maxRows) {
+        if (properties.patterns() == null || properties.patterns().isEmpty()) {
+            throw new IllegalArgumentException("Debe configurarse al menos un patrón de patente.");
+        }
         if (maxFileBytes <= 0 || maxRows <= 0) {
             throw new IllegalArgumentException("Los límites de importación deben ser mayores que cero.");
+        }
+        try {
+            this.patterns = properties.patterns().stream().map(pattern -> {
+                if (pattern == null || pattern.isBlank()) {
+                    throw new IllegalArgumentException("Los patrones de patente no pueden estar vacíos.");
+                }
+                return Pattern.compile(pattern);
+            }).toList();
+        } catch (PatternSyntaxException e) {
+            throw new IllegalArgumentException("Patrón de patente inválido: " + e.getPattern(), e);
         }
         this.repository = repository;
         this.maxFileBytes = maxFileBytes;
@@ -119,9 +134,9 @@ public class LicensePlateService implements ILicensePlateService {
             throw new LicensePlateException(Type.INVALID, "La patente es obligatoria.");
         }
         String normalized = number.strip().toUpperCase(Locale.ROOT);
-        if (!FORMAT.matcher(normalized).matches()) {
+        if (patterns.stream().noneMatch(pattern -> pattern.matcher(normalized).matches())) {
             throw new LicensePlateException(Type.INVALID,
-                    "La patente debe tener de 1 a 16 letras o números, sin espacios ni símbolos.");
+                    "La patente no coincide con ningún formato permitido.");
         }
         return normalized;
     }

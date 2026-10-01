@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
 
+import com.unla.gestionUsuario.config.LicensePlateProperties;
 import com.unla.gestionUsuario.entities.LicensePlate;
 import com.unla.gestionUsuario.exceptions.LicensePlateException;
 import com.unla.gestionUsuario.exceptions.LicensePlateException.Type;
@@ -24,13 +25,16 @@ import com.unla.gestionUsuario.repository.LicensePlateRepository;
 import com.unla.gestionUsuario.services.implementations.LicensePlateService;
 
 class LicensePlateServiceTests {
+    private static final LicensePlateProperties DEFAULT_PROPERTIES =
+            new LicensePlateProperties(List.of("[A-Z0-9]{1,16}"));
+
     private LicensePlateRepository repository;
     private LicensePlateService service;
 
     @BeforeEach
     void setUp() {
         repository = org.mockito.Mockito.mock(LicensePlateRepository.class);
-        service = new LicensePlateService(repository, 100_000, 1_000);
+        service = new LicensePlateService(repository, DEFAULT_PROPERTIES, 100_000, 1_000);
     }
 
     @Test
@@ -53,6 +57,31 @@ class LicensePlateServiceTests {
         LicensePlateException duplicate = assertThrows(LicensePlateException.class, () -> service.create("ab123cd"));
         assertEquals(Type.DUPLICATE, duplicate.getType());
         verify(repository, never()).save(any(LicensePlate.class));
+    }
+
+    @Test
+    void acceptsAnyConfiguredPatternForIndividualAndCsvImport() {
+        LicensePlateProperties properties = new LicensePlateProperties(
+                List.of("[A-Z]{2}[0-9]{3}", "[0-9]{3}[A-Z]{2}"));
+        service = new LicensePlateService(repository, properties, 100_000, 1_000);
+        when(repository.save(any(LicensePlate.class))).thenAnswer(call -> call.getArgument(0));
+        when(repository.findAllByNumberIn(any())).thenReturn(List.of());
+
+        assertEquals("AB123", service.create("ab123").getNumber());
+        assertEquals("123AB", service.create("123ab").getNumber());
+        assertEquals(2, service.importCsv(csv("AB123\n123AB\n")));
+        assertEquals(Type.INVALID, assertThrows(LicensePlateException.class,
+                () -> service.create("AB123CD")).getType());
+        assertEquals(Type.INVALID, assertThrows(LicensePlateException.class,
+                () -> service.importCsv(csv("AB123CD\n"))).getType());
+    }
+
+    @Test
+    void rejectsMissingOrInvalidConfiguredPatterns() {
+        assertThrows(IllegalArgumentException.class,
+                () -> new LicensePlateService(repository, new LicensePlateProperties(List.of()), 100, 10));
+        assertThrows(IllegalArgumentException.class,
+                () -> new LicensePlateService(repository, new LicensePlateProperties(List.of("[A-Z")), 100, 10));
     }
 
     @Test
@@ -96,13 +125,13 @@ class LicensePlateServiceTests {
 
     @Test
     void respectsConfiguredLimits() {
-        LicensePlateService fileLimit = new LicensePlateService(repository, 5, 1_000);
+        LicensePlateService fileLimit = new LicensePlateService(repository, DEFAULT_PROPERTIES, 5, 1_000);
         LicensePlateException oversizedFile = assertThrows(LicensePlateException.class,
                 () -> fileLimit.importCsv(csv("ABC123\n")));
         assertEquals(Type.INVALID, oversizedFile.getType());
         assertTrue(oversizedFile.getMessage().contains("5 bytes"));
 
-        LicensePlateService rowLimit = new LicensePlateService(repository, 100, 1);
+        LicensePlateService rowLimit = new LicensePlateService(repository, DEFAULT_PROPERTIES, 100, 1);
         LicensePlateException tooManyRows = assertThrows(LicensePlateException.class,
                 () -> rowLimit.importCsv(csv("ABC123\nAB123CD\n")));
         assertEquals(Type.INVALID, tooManyRows.getType());

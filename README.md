@@ -132,7 +132,16 @@ $body = @{ numero = 'ab123cd' } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/patentes' -ContentType 'application/json' -Body $body
 ```
 
-`POST /patentes` responde `201 Created` con `{"numero":"AB123CD"}`. Acepta letras latinas A-Z y números 0-9, de 1 a 16 caracteres. Elimina espacios al principio y al final; rechaza espacios internos, guiones, símbolos y valores vacíos con `400 Bad Request`. Una patente ya cargada, incluso con otra combinación de mayúsculas y minúsculas, devuelve `409 Conflict`.
+`POST /patentes` responde `201 Created` con `{"numero":"AB123CD"}`. Por defecto acepta letras latinas A-Z y números 0-9, de 1 a 16 caracteres. Elimina espacios al principio y al final; rechaza espacios internos, guiones, símbolos y valores vacíos con `400 Bad Request`. Una patente ya cargada, incluso con otra combinación de mayúsculas y minúsculas, devuelve `409 Conflict`.
+
+Los formatos permitidos se configuran como una lista en `application.properties`, usando índices consecutivos. La patente debe coincidir por completo con **al menos uno** de los patrones, después de normalizarla a mayúsculas. El valor predeterminado es `license-plates.patterns[0]=[A-Z0-9]{1,16}`. Para permitir dos formatos específicos, reemplazarlo por:
+
+```properties
+license-plates.patterns[0]=[A-Z]{2}[0-9]{3}
+license-plates.patterns[1]=[0-9]{3}[A-Z]{2}
+```
+
+La aplicación no inicia si la lista está vacía o contiene una expresión regular inválida. Esta misma configuración se aplica a la carga individual y a cada fila del CSV.
 
 Para importar varias patentes, enviar un archivo CSV UTF-8 de **una columna** al campo `archivo` de `POST /patentes/importar`. Puede incluir una primera línea `patente`; después lleva una patente por línea:
 
