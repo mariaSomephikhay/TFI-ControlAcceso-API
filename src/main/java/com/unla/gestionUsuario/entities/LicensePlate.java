@@ -42,6 +42,10 @@ public class LicensePlate {
         return number;
     }
 
+    public void changeNumber(String number) {
+        this.number = number;
+    }
+
     public Long getId() {
         return id;
     }

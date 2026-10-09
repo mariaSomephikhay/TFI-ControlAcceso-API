@@ -2,18 +2,24 @@ package com.unla.gestionUsuario;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.unla.gestionUsuario.controller.LicensePlateController;
@@ -70,5 +76,44 @@ class LicensePlateControllerTests {
         mvc.perform(multipart("/patentes/importar").file(file))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.cantidad").value(2));
+    }
+
+    @Test
+    void listsFindsUpdatesAndDeletesById() throws Exception {
+        LicensePlate plate = new LicensePlate("AB123CD");
+        ReflectionTestUtils.setField(plate, "id", 7L);
+        when(service.findAll()).thenReturn(List.of(plate));
+        when(service.findById(7L)).thenReturn(plate);
+        LicensePlate updated = new LicensePlate("XY123");
+        ReflectionTestUtils.setField(updated, "id", 7L);
+        when(service.update(7L, "xy123")).thenReturn(updated);
+
+        mvc.perform(get("/patentes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(7))
+                .andExpect(jsonPath("$[0].numero").value("AB123CD"));
+        mvc.perform(get("/patentes/7"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(7));
+        mvc.perform(put("/patentes/7").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"numero\":\"xy123\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(7))
+                .andExpect(jsonPath("$.numero").value("XY123"));
+        mvc.perform(delete("/patentes/7"))
+                .andExpect(status().isNoContent())
+                .andExpect(content().string(""));
+    }
+
+    @Test
+    void missingPlateReturnsNotFoundAndDuplicateUpdateReturnsConflict() throws Exception {
+        when(service.findById(8L)).thenThrow(new LicensePlateException(Type.NOT_FOUND, "No existe"));
+        when(service.update(7L, "AB123CD"))
+                .thenThrow(new LicensePlateException(Type.DUPLICATE, "Ya existe"));
+
+        mvc.perform(get("/patentes/8")).andExpect(status().isNotFound());
+        mvc.perform(put("/patentes/7").contentType(MediaType.APPLICATION_JSON)
+                .content("{\"numero\":\"AB123CD\"}"))
+                .andExpect(status().isConflict());
     }
 }
