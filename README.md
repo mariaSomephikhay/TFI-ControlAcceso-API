@@ -82,7 +82,7 @@ Ambos endpoints reciben JSON con los campos `id` y `password` y devuelven un men
 
 | Método | Ruta | Resultado exitoso | Error manejado por el controlador |
 | --- | --- | --- | --- |
-| POST | `/users/new` | `201 Created` | `400 Bad Request` |
+| POST | `/users/new` | `201 Created` | `400 Bad Request`; `409 Conflict` si el usuario ya existe |
 | POST | `/users/login` | `200 OK` | `401 Unauthorized` |
 
 ### Crear un usuario
@@ -99,6 +99,8 @@ Respuesta exitosa:
 ```text
 Usuario creado exitosamente
 ```
+
+Si el identificador ya existe, responde `409 Conflict` y conserva los datos del usuario registrado.
 
 ### Iniciar sesión
 
@@ -208,7 +210,6 @@ Los paquetes Java y la clase principal conservan el nombre `gestionUsuario` del 
 - Las contraseñas se almacenan y comparan en texto plano.
 - El login valida credenciales y registra el acceso; no emite tokens ni crea una sesión de autenticación.
 - No existe un endpoint de desbloqueo y el método de reinicio del contador está pendiente de implementación.
-- El alta no comprueba si el identificador ya existe; guardar uno existente puede actualizar sus datos y reiniciar su estado y contador.
 - Los campos de entrada no tienen restricciones de validación declaradas en el DTO.
 
 Estas características describen la implementación migrada y deben contemplarse antes de utilizarla como sistema de autenticación en producción.
