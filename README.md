@@ -159,7 +159,13 @@ curl.exe -F "archivo=@patentes.csv;type=text/csv" http://localhost:8080/patentes
 
 La respuesta exitosa es `201 Created` con `{"cantidad":2}`. Por defecto, el archivo admite hasta 100000 bytes y 1000 patentes; esos límites se ajustan mediante `license-plates.import.max-file-bytes` y `license-plates.import.max-rows` en `application.properties`. Se validan todas las filas y se detectan duplicados tanto dentro del archivo como en la base antes de guardar; si alguna falla, no se importa ninguna. Los errores de formato devuelven `400`, los duplicados `409` y los archivos que exceden el límite de carga de Spring `413`.
 
-La carga solo registra patentes. La consulta, modificación, baja y validación de acceso se implementarán por separado. Estos endpoints aún no tienen protección de autenticación.
+### Consultar, modificar y dar de baja patentes
+
+`GET /patentes` lista las patentes con `id`, `numero`, `createdAt` y `updatedAt`; `GET /patentes/{id}` devuelve una sola. La lista vacía responde `200 OK` con `[]`, y un ID inexistente responde `404 Not Found`.
+
+`PUT /patentes/{id}` recibe el mismo JSON que el alta (`{"numero":"AB123CD"}`), normaliza y valida el número, y devuelve la patente actualizada. Responde `400` para un formato inválido, `409` si el número pertenece a otra patente y `404` si el ID no existe. `DELETE /patentes/{id}` responde `204 No Content` al borrar y `404` si el ID no existe.
+
+La gestión de tarjetas y la validación de acceso siguen pendientes. Estos endpoints aún no tienen protección de autenticación.
 
 ## Compilación y pruebas
 
@@ -175,7 +181,7 @@ En Linux o macOS:
 sh mvnw clean verify
 ```
 
-Las pruebas de usuarios verifican el alta con estado inicial, el registro de un login exitoso, el bloqueo tras tres fallos, el rechazo de usuarios inexistentes y el mapper de credenciales. Las pruebas de patentes cubren normalización, formatos inválidos, duplicados, importación completa y respuestas HTTP. Utilizan repositorios simulados y no requieren MySQL; no prueban la conexión real a la base.
+Las pruebas de usuarios verifican el alta con estado inicial, el registro de un login exitoso, el bloqueo tras tres fallos, el rechazo de usuarios inexistentes y el mapper de credenciales. Las pruebas de patentes cubren normalización, formatos inválidos, duplicados, importación, consulta, modificación, baja y respuestas HTTP. Utilizan repositorios simulados y no requieren MySQL; no prueban la conexión real a la base.
 
 El proceso genera un JAR ejecutable:
 
