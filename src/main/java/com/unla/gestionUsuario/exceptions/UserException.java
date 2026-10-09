@@ -6,6 +6,7 @@ public class UserException extends Exception {
 	
 	public enum Type {
         USER_NOT_FOUND("El usuario no fue encontrado."),
+        USER_ALREADY_EXISTS("El usuario ya existe."),
         INVALID_PASSWORD("La contraseña es incorrecta."),
         BLOCK_USER("El usuario está bloqueado.");
 		

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.unla.gestionUsuario.dtos.UserDTO;
+import com.unla.gestionUsuario.exceptions.UserException;
 import com.unla.gestionUsuario.mapper.IUserMapper;
 import com.unla.gestionUsuario.services.implementations.UserService;
 
@@ -27,6 +28,10 @@ public class UserController {
 		try {	
 			userService.createUser(userMapper.dtoToUser(newUser));
 			return ResponseEntity.status(HttpStatus.CREATED).body("Usuario creado exitosamente");
+		}catch(UserException e) {
+			HttpStatus status = e.getTipo() == UserException.Type.USER_ALREADY_EXISTS
+					? HttpStatus.CONFLICT : HttpStatus.BAD_REQUEST;
+			return ResponseEntity.status(status).body("Error al crear el usuario, " + e.getMessage());
 		}catch(Exception e) {
 			return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Error al crear el usuario, " + e.getMessage());
 		}

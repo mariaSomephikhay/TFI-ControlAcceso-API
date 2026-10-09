@@ -47,7 +47,10 @@ public class UserService implements IUserService{
 
 	@Override
 	public User createUser(User user) throws Exception {
-		
+		if (userRepositorio.existsById(user.getId())) {
+			throw UserException.of(UserException.Type.USER_ALREADY_EXISTS);
+		}
+
 		user.setBlockAmount(0);
 		user.setState(true);
 		
