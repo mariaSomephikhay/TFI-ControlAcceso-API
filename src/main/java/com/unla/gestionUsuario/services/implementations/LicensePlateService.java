@@ -65,6 +65,41 @@ public class LicensePlateService implements ILicensePlateService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public List<LicensePlate> findAll() {
+        List<LicensePlate> plates = new ArrayList<>();
+        repository.findAll().forEach(plates::add);
+        return plates;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LicensePlate findById(Long id) {
+        return repository.findById(id).orElseThrow(() -> notFound(id));
+    }
+
+    @Override
+    @Transactional
+    public LicensePlate update(Long id, String number) {
+        LicensePlate plate = findById(id);
+        String normalized = normalize(number);
+        if (plate.getNumber().equals(normalized)) {
+            return plate;
+        }
+        if (repository.existsByNumber(normalized)) {
+            throw new LicensePlateException(Type.DUPLICATE, "La patente ya está cargada: " + normalized);
+        }
+        plate.changeNumber(normalized);
+        return repository.save(plate);
+    }
+
+    @Override
+    @Transactional
+    public void delete(Long id) {
+        repository.delete(findById(id));
+    }
+
+    @Override
     @Transactional
     public int importCsv(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -139,5 +174,9 @@ public class LicensePlateService implements ILicensePlateService {
                     "La patente no coincide con ningún formato permitido.");
         }
         return normalized;
+    }
+
+    private LicensePlateException notFound(Long id) {
+        return new LicensePlateException(Type.NOT_FOUND, "No se encontró la patente con ID " + id + ".");
     }
 }

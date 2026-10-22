@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -82,6 +83,51 @@ class LicensePlateServiceTests {
                 () -> new LicensePlateService(repository, new LicensePlateProperties(List.of()), 100, 10));
         assertThrows(IllegalArgumentException.class,
                 () -> new LicensePlateService(repository, new LicensePlateProperties(List.of("[A-Z")), 100, 10));
+    }
+
+    @Test
+    void findsPlatesAndReportsMissingId() {
+        LicensePlate plate = new LicensePlate("AB123CD");
+        when(repository.findAll()).thenReturn(List.of(plate));
+        when(repository.findById(7L)).thenReturn(java.util.Optional.of(plate));
+
+        assertEquals(List.of(plate), service.findAll());
+        assertEquals(plate, service.findById(7L));
+        assertEquals(Type.NOT_FOUND, assertThrows(LicensePlateException.class,
+                () -> service.findById(8L)).getType());
+    }
+
+    @Test
+    void updateNormalizesAndRejectsDuplicatesWithoutChangingStoredNumber() {
+        LicensePlate plate = new LicensePlate("AB123CD");
+        when(repository.findById(7L)).thenReturn(java.util.Optional.of(plate));
+        when(repository.save(plate)).thenAnswer(call -> call.getArgument(0));
+
+        assertEquals("XY123", service.update(7L, " xy123 ").getNumber());
+        verify(repository).save(plate);
+
+        assertEquals("XY123", service.update(7L, "xy123").getNumber());
+        verify(repository, times(1)).save(plate);
+
+        when(repository.existsByNumber("ZZ999")).thenReturn(true);
+        assertEquals(Type.DUPLICATE, assertThrows(LicensePlateException.class,
+                () -> service.update(7L, "zz999")).getType());
+        assertEquals("XY123", plate.getNumber());
+        verify(repository, times(1)).save(plate);
+        assertEquals(Type.NOT_FOUND, assertThrows(LicensePlateException.class,
+                () -> service.update(8L, "AA123")).getType());
+    }
+
+    @Test
+    void deleteRequiresAnExistingPlate() {
+        LicensePlate plate = new LicensePlate("AB123CD");
+        when(repository.findById(7L)).thenReturn(java.util.Optional.of(plate));
+
+        service.delete(7L);
+
+        verify(repository).delete(plate);
+        assertEquals(Type.NOT_FOUND, assertThrows(LicensePlateException.class,
+                () -> service.delete(8L)).getType());
     }
 
     @Test

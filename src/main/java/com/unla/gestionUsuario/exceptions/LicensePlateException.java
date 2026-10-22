@@ -3,7 +3,8 @@ package com.unla.gestionUsuario.exceptions;
 public class LicensePlateException extends RuntimeException {
     public enum Type {
         INVALID,
-        DUPLICATE
+        DUPLICATE,
+        NOT_FOUND
     }
 
     private final Type type;
