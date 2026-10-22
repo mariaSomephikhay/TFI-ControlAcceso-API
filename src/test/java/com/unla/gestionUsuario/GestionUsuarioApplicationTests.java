@@ -50,6 +50,20 @@ class GestionUsuarioApplicationTests {
     }
 
     @Test
+    void duplicateUserIsRejectedWithoutChangingExistingAccount() {
+        stored.setState(false);
+        stored.setBlockAmount(3);
+        when(users.existsById("test-user")).thenReturn(true);
+
+        UserException error = assertThrows(UserException.class, () -> service.createUser(stored));
+
+        assertEquals(UserException.Type.USER_ALREADY_EXISTS, error.getTipo());
+        assertFalse(stored.isState());
+        assertEquals(3, stored.getBlockAmount());
+        verify(users, never()).save(any(User.class));
+    }
+
+    @Test
     void successfulLoginRecordsAccess() throws Exception {
         assertSame(stored, service.loginUser(stored));
         ArgumentCaptor<UserLog> event = ArgumentCaptor.forClass(UserLog.class);
