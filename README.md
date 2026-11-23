@@ -5,9 +5,9 @@ API REST de gestión de usuarios y control de acceso, desarrollada con Spring Bo
 ## Funcionalidades
 
 - Alta de usuarios con estado activo y contador de intentos fallidos en cero.
-- Inicio de sesión mediante identificador y contraseña.
+- Inicio de sesión del administrador de acceso desde el embebido, mediante tarjeta y PIN.
 - Bloqueo del usuario al acumular tres contraseñas incorrectas.
-- Registro de los inicios de sesión exitosos en la tabla `user_logs`.
+- Registro de los inicios de sesión exitosos en `authentication_events`.
 - Alta individual e importación CSV de patentes autorizadas.
 
 ## Tecnologías y requisitos
@@ -34,9 +34,7 @@ La configuración se encuentra en [application.properties](src/main/resources/ap
 
 La URL incluye `createDatabaseIfNotExist=true`: la conexión puede crear la base si el usuario tiene permisos. Hibernate crea o actualiza las tablas al iniciar la aplicación. MySQL debe estar ejecutándose antes de iniciar la API.
 
-Las tablas de la aplicación se llaman `license_plates`, `users` y `user_logs`. En una base nueva, Hibernate las crea al iniciar la aplicación. `ddl-auto=update` conserva los datos entre ejecuciones, pero no renombra tablas ni columnas de versiones anteriores; una base existente con el esquema viejo requiere una migración manual para conservar sus registros.
-
-`license_plates.id` y `user_logs.id` se generan automáticamente. En `users`, el identificador de acceso `user_id` ya es la clave primaria. Las tres entidades completan `created_at` y `updated_at` mediante `@CreationTimestamp` y `@UpdateTimestamp`.
+El esquema de operadores usa `users.id` autogenerado y un `card_uid` único. Si ya existe una base con `users.user_id`, seguí la [guía de migración](docs/migration.md) para copiar usuarios, auditoría y patentes a una base nueva.
 
 Para usar otra conexión sin modificar el archivo, configurar las variables de entorno en la misma terminal de PowerShell desde la que se ejecutará la aplicación:
 
@@ -71,14 +69,7 @@ La API utiliza por defecto `http://localhost:8080`. No incluye una interfaz web;
 
 ## Endpoints
 
-Ambos endpoints reciben JSON con los campos `id` y `password` y devuelven un mensaje de texto.
-
-```json
-{
-  "id": "usuario_demo",
-  "password": "clave_demo"
-}
-```
+Los endpoints de operadores reciben JSON y devuelven un mensaje de texto.
 
 | Método | Ruta | Resultado exitoso | Error manejado por el controlador |
 | --- | --- | --- | --- |
@@ -90,7 +81,7 @@ Ambos endpoints reciben JSON con los campos `id` y `password` y devuelven un men
 Ejemplo en PowerShell:
 
 ```powershell
-$body = @{ id = 'usuario_demo'; password = 'clave_demo' } | ConvertTo-Json
+$body = @{ username = 'operador_demo'; cardUid = 'A01B02CD'; password = '0123' } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/users/new' -ContentType 'application/json' -Body $body
 ```
 
@@ -100,12 +91,12 @@ Respuesta exitosa:
 Usuario creado exitosamente
 ```
 
-Si el identificador ya existe, responde `409 Conflict` y conserva los datos del usuario registrado.
+Si el nombre de usuario o el UID ya existe, responde `409 Conflict` y conserva los datos del operador registrado.
 
 ### Iniciar sesión
 
 ```powershell
-$body = @{ id = 'usuario_demo'; password = 'clave_demo' } | ConvertTo-Json
+$body = @{ cardUid = 'A01B02CD'; password = '0123' } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/users/login' -ContentType 'application/json' -Body $body
 ```
 
@@ -117,11 +108,13 @@ Usuario logeado correctamente
 
 Si el usuario no existe, la contraseña es incorrecta o el usuario está bloqueado, el controlador responde con `401` y un mensaje que comienza con `Error al iniciar sesion, `.
 
+El contrato anterior con `id` sigue disponible para el embebido. `id` admite el UID o un identificador migrado. Enviá el PIN como texto para conservar los ceros iniciales.
+
 ### Comportamiento del bloqueo
 
-Cada contraseña incorrecta incrementa `blockAmount`. En el tercer fallo se cambia `state` a `false`; esa petición todavía informa contraseña incorrecta. Las siguientes peticiones informan que el usuario está bloqueado, incluso si la contraseña es correcta.
+Cada contraseña incorrecta incrementa `failedAttempts`. En el tercer fallo se desactiva al operador. Las siguientes peticiones informan que el operador está bloqueado.
 
-Los intentos fallidos son acumulativos: un login exitoso no reinicia el contador. Solo los accesos exitosos generan un registro en `user_logs`, con evento `0`, usuario y fecha de creación.
+Los intentos fallidos se acumulan incluso después de un login exitoso. Cada login exitoso genera un registro en `authentication_events`.
 
 ### Cargar patentes
 
@@ -183,7 +176,7 @@ En Linux o macOS:
 sh mvnw clean verify
 ```
 
-Las pruebas de usuarios verifican el alta con estado inicial, el registro de un login exitoso, el bloqueo tras tres fallos, el rechazo de usuarios inexistentes y el mapper de credenciales. Las pruebas de patentes cubren normalización, formatos inválidos, duplicados, importación, consulta, modificación, baja y respuestas HTTP. Utilizan repositorios simulados y no requieren MySQL; no prueban la conexión real a la base.
+Las pruebas de operadores verifican el alta, duplicados, la auditoría, el bloqueo y la compatibilidad de las peticiones del embebido. Las pruebas de patentes cubren normalización, formatos inválidos, duplicados, importación, consulta, modificación, baja y respuestas HTTP. Estas pruebas utilizan repositorios simulados.
 
 El proceso genera un JAR ejecutable:
 
@@ -197,16 +190,20 @@ java -jar target/TFI-ControlAcceso-API-0.0.1-SNAPSHOT.jar
 src/main/java/com/unla/gestionUsuario/
   controller/                 Endpoints REST
   dtos/                       Datos de las peticiones
-  entities/                   Entidades User, UserLog y LicensePlate
+  entities/                   Entidad LicensePlate
   exceptions/                 Errores de negocio
-  mapper/                     Conversión entre DTO y entidad
   repository/                 Acceso a datos con Spring Data
   service/                    Interfaz del servicio
-  services/implementations/   Lógica de usuarios y acceso
+  services/implementations/   Gestión de patentes
+src/main/java/com/unla/accesscontrol/
+  controller/                 Endpoints de operadores
+  entities/                   Entidades del nuevo modelo
+  repository/                 Acceso a datos de operadores
+  service/                    Alta y autenticación de operadores
 src/main/resources/
   application.properties      Configuración de la aplicación
 src/test/java/com/unla/gestionUsuario/
-  GestionUsuarioApplicationTests.java
+  OperatorServiceTests.java
 ```
 
 Los paquetes Java y la clase principal conservan el nombre `gestionUsuario` del proyecto de origen.
@@ -216,6 +213,5 @@ Los paquetes Java y la clase principal conservan el nombre `gestionUsuario` del 
 - Las contraseñas se almacenan y comparan en texto plano.
 - El login valida credenciales y registra el acceso; no emite tokens ni crea una sesión de autenticación.
 - No existe un endpoint de desbloqueo y el método de reinicio del contador está pendiente de implementación.
-- Los campos de entrada no tienen restricciones de validación declaradas en el DTO.
 
 Estas características describen la implementación migrada y deben contemplarse antes de utilizarla como sistema de autenticación en producción.
