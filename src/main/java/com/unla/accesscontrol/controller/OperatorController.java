@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.unla.accesscontrol.service.OperatorService;
-import com.unla.gestionUsuario.exceptions.UserException;
+import com.unla.accesscontrol.exceptions.UserException;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

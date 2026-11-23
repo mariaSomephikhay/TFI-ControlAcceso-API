@@ -1,4 +1,4 @@
-package com.unla.gestionUsuario.exceptions;
+package com.unla.accesscontrol.exceptions;
 
 public class UserException extends Exception {
 	private static final long serialVersionUID = -8712610664365126958L;

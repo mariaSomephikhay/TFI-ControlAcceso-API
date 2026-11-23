@@ -1,4 +1,4 @@
-package com.unla.gestionUsuario.exceptions;
+package com.unla.accesscontrol.exceptions;
 
 public class LicensePlateException extends RuntimeException {
     public enum Type {

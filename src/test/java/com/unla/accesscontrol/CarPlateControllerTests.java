@@ -1,4 +1,4 @@
-package com.unla.gestionUsuario;
+package com.unla.accesscontrol;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -24,8 +24,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.unla.accesscontrol.controller.CarPlateController;
 import com.unla.accesscontrol.entities.Car;
-import com.unla.gestionUsuario.exceptions.LicensePlateException;
-import com.unla.gestionUsuario.exceptions.LicensePlateException.Type;
+import com.unla.accesscontrol.exceptions.LicensePlateException;
+import com.unla.accesscontrol.exceptions.LicensePlateException.Type;
 import com.unla.accesscontrol.service.CarService;
 
 class CarPlateControllerTests {

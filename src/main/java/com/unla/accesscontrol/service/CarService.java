@@ -12,8 +12,8 @@ import com.unla.accesscontrol.entities.Person;
 import com.unla.accesscontrol.repository.CarRepository;
 import com.unla.accesscontrol.repository.PersonRepository;
 import com.unla.accesscontrol.repository.TrackingRepository;
-import com.unla.gestionUsuario.exceptions.LicensePlateException;
-import com.unla.gestionUsuario.exceptions.LicensePlateException.Type;
+import com.unla.accesscontrol.exceptions.LicensePlateException;
+import com.unla.accesscontrol.exceptions.LicensePlateException.Type;
 
 @Service
 public class CarService {

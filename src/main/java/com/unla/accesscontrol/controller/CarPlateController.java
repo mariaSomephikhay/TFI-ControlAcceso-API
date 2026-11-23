@@ -27,9 +27,9 @@ import com.unla.accesscontrol.service.CarService;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Size;
-import com.unla.gestionUsuario.dtos.LicensePlateDTO;
-import com.unla.gestionUsuario.dtos.LicensePlateImportDTO;
-import com.unla.gestionUsuario.exceptions.LicensePlateException;
+import com.unla.accesscontrol.dtos.LicensePlateDTO;
+import com.unla.accesscontrol.dtos.LicensePlateImportDTO;
+import com.unla.accesscontrol.exceptions.LicensePlateException;
 
 @RestController
 @RequestMapping("/patentes")
