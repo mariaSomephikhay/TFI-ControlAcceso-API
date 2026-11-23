@@ -15,6 +15,7 @@ import com.unla.accesscontrol.repository.AuthenticationEventRepository;
 import com.unla.accesscontrol.repository.LegacyOperatorIdRepository;
 import com.unla.accesscontrol.repository.OperatorRepository;
 import com.unla.accesscontrol.service.OperatorService;
+import com.unla.accesscontrol.service.impl.OperatorServiceImpl;
 import com.unla.accesscontrol.exceptions.UserException;
 import com.unla.accesscontrol.exceptions.UserException.Type;
 
@@ -22,7 +23,7 @@ class OperatorServiceTests {
     private final OperatorRepository users = mock(OperatorRepository.class);
     private final AuthenticationEventRepository events = mock(AuthenticationEventRepository.class);
     private final LegacyOperatorIdRepository legacyIds = mock(LegacyOperatorIdRepository.class);
-    private final OperatorService service = new OperatorService(users, events, legacyIds);
+    private final OperatorService service = new OperatorServiceImpl(users, events, legacyIds);
     private final User stored = new User();
 
     @BeforeEach

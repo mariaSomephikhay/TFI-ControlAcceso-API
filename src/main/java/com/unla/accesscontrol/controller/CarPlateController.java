@@ -1,9 +1,9 @@
 package com.unla.accesscontrol.controller;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -76,8 +76,12 @@ public class CarPlateController {
     @PostMapping(value = "/importar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<LicensePlateImportDTO> importCsv(@RequestPart("archivo") MultipartFile file,
             @RequestParam("personId") Long personId) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new LicensePlateImportDTO(service.importCsv(file, personId)));
+        try {
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new LicensePlateImportDTO(service.importCsv(file.getInputStream(), personId)));
+        } catch (IOException error) {
+            throw new LicensePlateException(LicensePlateException.Type.INVALID, "No se pudo leer el archivo CSV.", error);
+        }
     }
 
     @ExceptionHandler(LicensePlateException.class)
@@ -88,11 +92,6 @@ public class CarPlateController {
             case INVALID -> HttpStatus.BAD_REQUEST;
         };
         return ResponseEntity.status(status).body(error.getMessage());
-    }
-
-    @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<String> handleConcurrentDuplicate() {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body("Una patente ya está cargada.");
     }
 
     @ExceptionHandler(MaxUploadSizeExceededException.class)

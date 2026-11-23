@@ -1,4 +1,4 @@
-package com.unla.accesscontrol;
+package com.unla.accesscontrol.config;
 
 import java.sql.SQLException;
 import java.util.Map;

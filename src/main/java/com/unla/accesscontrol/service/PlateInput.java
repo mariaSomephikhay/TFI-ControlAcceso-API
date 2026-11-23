@@ -1,6 +1,7 @@
 package com.unla.accesscontrol.service;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -11,7 +12,6 @@ import java.util.regex.PatternSyntaxException;
 
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.unla.accesscontrol.config.LicensePlateProperties;
 import com.unla.accesscontrol.exceptions.LicensePlateException;
@@ -46,22 +46,27 @@ public class PlateInput {
         this.maxRows = maxRows;
     }
 
-    public Set<String> readCsv(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
+    public Set<String> readCsv(InputStream file) {
+        if (file == null) {
             throw new LicensePlateException(Type.INVALID, "El archivo CSV está vacío.");
         }
-        if (file.getSize() > maxFileBytes) {
+
+        int readLimit = (int) Math.min(maxFileBytes, Integer.MAX_VALUE - 1L) + 1;
+        byte[] bytes;
+        try (file) {
+            bytes = file.readNBytes(readLimit);
+        } catch (IOException e) {
+            throw new LicensePlateException(Type.INVALID, "No se pudo leer el archivo CSV.", e);
+        }
+        if (bytes.length == 0) {
+            throw new LicensePlateException(Type.INVALID, "El archivo CSV está vacío.");
+        }
+        if (bytes.length == readLimit) {
             throw new LicensePlateException(Type.INVALID,
                     "El archivo CSV supera el límite de " + maxFileBytes + " bytes.");
         }
 
-        String content;
-        try {
-            content = new String(file.getBytes(), StandardCharsets.UTF_8);
-        } catch (IOException e) {
-            throw new LicensePlateException(Type.INVALID, "No se pudo leer el archivo CSV.");
-        }
-
+        String content = new String(bytes, StandardCharsets.UTF_8);
         String[] lines = content.replaceFirst("^\\uFEFF", "").split("\\R", -1);
         Set<String> numbers = new LinkedHashSet<>();
         boolean firstRow = true;

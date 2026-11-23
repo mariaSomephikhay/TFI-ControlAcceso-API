@@ -1,6 +1,5 @@
 package com.unla.accesscontrol.controller;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -30,7 +29,7 @@ public class OperatorController {
         try {
             operators.create(request.username(), request.cardUid(), request.password());
             return ResponseEntity.status(HttpStatus.CREATED).body("Usuario creado exitosamente");
-        } catch (UserException | DataIntegrityViolationException duplicate) {
+        } catch (UserException duplicate) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
                     .body("Error al crear el usuario, El usuario ya existe.");
         }
