@@ -22,7 +22,7 @@ class LegacySchemaGuard implements HibernatePropertiesCustomizer {
                 SELECT 1 FROM information_schema.columns
                 WHERE table_schema = DATABASE() AND (
                     (table_name = 'users' AND column_name = 'user_id')
-                    OR table_name = 'user_logs'
+                    OR table_name IN ('user_logs', 'license_plates')
                 ) LIMIT 1
                 """;
         try (var connection = dataSource.getConnection();

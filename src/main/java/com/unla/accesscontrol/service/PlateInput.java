@@ -1,8 +1,7 @@
-package com.unla.gestionUsuario.services.implementations;
+package com.unla.accesscontrol.service;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -10,27 +9,21 @@ import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
+import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.unla.gestionUsuario.config.LicensePlateProperties;
-import com.unla.gestionUsuario.entities.LicensePlate;
 import com.unla.gestionUsuario.exceptions.LicensePlateException;
 import com.unla.gestionUsuario.exceptions.LicensePlateException.Type;
-import com.unla.gestionUsuario.repository.LicensePlateRepository;
-import com.unla.gestionUsuario.service.ILicensePlateService;
 
-@Service
-public class LicensePlateService implements ILicensePlateService {
-    private final LicensePlateRepository repository;
+@Component
+public class PlateInput {
     private final List<Pattern> patterns;
     private final long maxFileBytes;
     private final int maxRows;
 
-    public LicensePlateService(LicensePlateRepository repository,
-            LicensePlateProperties properties,
+    public PlateInput(LicensePlateProperties properties,
             @Value("${license-plates.import.max-file-bytes}") long maxFileBytes,
             @Value("${license-plates.import.max-rows}") int maxRows) {
         if (properties.patterns() == null || properties.patterns().isEmpty()) {
@@ -49,59 +42,11 @@ public class LicensePlateService implements ILicensePlateService {
         } catch (PatternSyntaxException e) {
             throw new IllegalArgumentException("Patrón de patente inválido: " + e.getPattern(), e);
         }
-        this.repository = repository;
         this.maxFileBytes = maxFileBytes;
         this.maxRows = maxRows;
     }
 
-    @Override
-    @Transactional
-    public LicensePlate create(String number) {
-        String normalized = normalize(number);
-        if (repository.existsByNumber(normalized)) {
-            throw new LicensePlateException(Type.DUPLICATE, "La patente ya está cargada: " + normalized);
-        }
-        return repository.save(new LicensePlate(normalized));
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public List<LicensePlate> findAll() {
-        List<LicensePlate> plates = new ArrayList<>();
-        repository.findAll().forEach(plates::add);
-        return plates;
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public LicensePlate findById(Long id) {
-        return repository.findById(id).orElseThrow(() -> notFound(id));
-    }
-
-    @Override
-    @Transactional
-    public LicensePlate update(Long id, String number) {
-        LicensePlate plate = findById(id);
-        String normalized = normalize(number);
-        if (plate.getNumber().equals(normalized)) {
-            return plate;
-        }
-        if (repository.existsByNumber(normalized)) {
-            throw new LicensePlateException(Type.DUPLICATE, "La patente ya está cargada: " + normalized);
-        }
-        plate.changeNumber(normalized);
-        return repository.save(plate);
-    }
-
-    @Override
-    @Transactional
-    public void delete(Long id) {
-        repository.delete(findById(id));
-    }
-
-    @Override
-    @Transactional
-    public int importCsv(MultipartFile file) {
+    public Set<String> readCsv(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new LicensePlateException(Type.INVALID, "El archivo CSV está vacío.");
         }
@@ -152,31 +97,18 @@ public class LicensePlateService implements ILicensePlateService {
             throw new LicensePlateException(Type.INVALID, "El archivo CSV no contiene patentes.");
         }
 
-        for (LicensePlate existing : repository.findAllByNumberIn(numbers)) {
-            throw new LicensePlateException(Type.DUPLICATE,
-                    "La patente ya está cargada: " + existing.getNumber());
-        }
-        List<LicensePlate> newPlates = new ArrayList<>(numbers.size());
-        for (String number : numbers) {
-            newPlates.add(new LicensePlate(number));
-        }
-        repository.saveAll(newPlates);
-        return newPlates.size();
+        return numbers;
     }
 
-    private String normalize(String number) {
+    public String normalize(String number) {
         if (number == null || number.isBlank()) {
             throw new LicensePlateException(Type.INVALID, "La patente es obligatoria.");
         }
         String normalized = number.strip().toUpperCase(Locale.ROOT);
-        if (patterns.stream().noneMatch(pattern -> pattern.matcher(normalized).matches())) {
+        if (normalized.length() > 16 || patterns.stream().noneMatch(pattern -> pattern.matcher(normalized).matches())) {
             throw new LicensePlateException(Type.INVALID,
                     "La patente no coincide con ningún formato permitido.");
         }
         return normalized;
-    }
-
-    private LicensePlateException notFound(Long id) {
-        return new LicensePlateException(Type.NOT_FOUND, "No se encontró la patente con ID " + id + ".");
     }
 }

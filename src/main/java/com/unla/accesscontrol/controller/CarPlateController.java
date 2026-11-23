@@ -1,5 +1,6 @@
-package com.unla.gestionUsuario.controller;
+package com.unla.accesscontrol.controller;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.dao.DataIntegrityViolationException;
@@ -15,51 +16,55 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestPart;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.unla.gestionUsuario.dtos.LicensePlateDetailDTO;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.unla.accesscontrol.entities.Car;
+import com.unla.accesscontrol.service.CarService;
+
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import com.unla.gestionUsuario.dtos.LicensePlateDTO;
 import com.unla.gestionUsuario.dtos.LicensePlateImportDTO;
-import com.unla.gestionUsuario.entities.LicensePlate;
 import com.unla.gestionUsuario.exceptions.LicensePlateException;
-import com.unla.gestionUsuario.service.ILicensePlateService;
 
 @RestController
 @RequestMapping("/patentes")
-public class LicensePlateController {
-    private final ILicensePlateService service;
+public class CarPlateController {
+    private final CarService service;
 
-    public LicensePlateController(ILicensePlateService service) {
+    public CarPlateController(CarService service) {
         this.service = service;
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<LicensePlateDTO> create(@RequestBody LicensePlateDTO request) {
+    public ResponseEntity<LicensePlateDTO> create(@Valid @RequestBody CreateCar request) {
         if (request == null) {
             throw new LicensePlateException(LicensePlateException.Type.INVALID, "La patente es obligatoria.");
         }
-        LicensePlate plate = service.create(request.number());
-        return ResponseEntity.status(HttpStatus.CREATED).body(new LicensePlateDTO(plate.getNumber()));
+        Car plate = service.create(request.number(), request.personId(), request.description());
+        return ResponseEntity.status(HttpStatus.CREATED).body(new LicensePlateDTO(plate.getLicensePlate()));
     }
 
     @GetMapping
-    public List<LicensePlateDetailDTO> findAll() {
-        return service.findAll().stream().map(LicensePlateDetailDTO::from).toList();
+    public List<PlateDetail> findAll() {
+        return service.findAll().stream().map(PlateDetail::from).toList();
     }
 
     @GetMapping("/{id}")
-    public LicensePlateDetailDTO findById(@PathVariable Long id) {
-        return LicensePlateDetailDTO.from(service.findById(id));
+    public PlateDetail findById(@PathVariable Long id) {
+        return PlateDetail.from(service.findById(id));
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public LicensePlateDetailDTO update(@PathVariable Long id, @RequestBody LicensePlateDTO request) {
+    public PlateDetail update(@PathVariable Long id, @RequestBody LicensePlateDTO request) {
         if (request == null) {
             throw new LicensePlateException(LicensePlateException.Type.INVALID, "La patente es obligatoria.");
         }
-        return LicensePlateDetailDTO.from(service.update(id, request.number()));
+        return PlateDetail.from(service.update(id, request.number()));
     }
 
     @DeleteMapping("/{id}")
@@ -69,9 +74,10 @@ public class LicensePlateController {
     }
 
     @PostMapping(value = "/importar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<LicensePlateImportDTO> importCsv(@RequestPart("archivo") MultipartFile file) {
+    public ResponseEntity<LicensePlateImportDTO> importCsv(@RequestPart("archivo") MultipartFile file,
+            @RequestParam("personId") Long personId) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(new LicensePlateImportDTO(service.importCsv(file)));
+                .body(new LicensePlateImportDTO(service.importCsv(file, personId)));
     }
 
     @ExceptionHandler(LicensePlateException.class)
@@ -92,5 +98,15 @@ public class LicensePlateController {
     @ExceptionHandler(MaxUploadSizeExceededException.class)
     public ResponseEntity<String> handleOversizedFile() {
         return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE).body("El archivo CSV es demasiado grande.");
+    }
+
+    public record CreateCar(@JsonProperty("numero") String number, Long personId, @Size(max = 255) String description) {
+    }
+
+    public record PlateDetail(Long id, @JsonProperty("numero") String number,
+            LocalDateTime createdAt, LocalDateTime updatedAt) {
+        static PlateDetail from(Car car) {
+            return new PlateDetail(car.getId(), car.getLicensePlate(), car.getCreatedAt(), car.getUpdatedAt());
+        }
     }
 }
