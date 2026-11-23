@@ -22,45 +22,45 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import com.unla.gestionUsuario.controller.LicensePlateController;
-import com.unla.gestionUsuario.entities.LicensePlate;
+import com.unla.accesscontrol.controller.CarPlateController;
+import com.unla.accesscontrol.entities.Car;
 import com.unla.gestionUsuario.exceptions.LicensePlateException;
 import com.unla.gestionUsuario.exceptions.LicensePlateException.Type;
-import com.unla.gestionUsuario.service.ILicensePlateService;
+import com.unla.accesscontrol.service.CarService;
 
-class LicensePlateControllerTests {
-    private ILicensePlateService service;
+class CarPlateControllerTests {
+    private CarService service;
     private MockMvc mvc;
 
     @BeforeEach
     void setUp() {
-        service = org.mockito.Mockito.mock(ILicensePlateService.class);
-        mvc = MockMvcBuilders.standaloneSetup(new LicensePlateController(service)).build();
+        service = org.mockito.Mockito.mock(CarService.class);
+        mvc = MockMvcBuilders.standaloneSetup(new CarPlateController(service)).build();
     }
 
     @Test
     void createReturnsNormalizedNumber() throws Exception {
-        when(service.create("ab123cd")).thenReturn(new LicensePlate("AB123CD"));
+        when(service.create("ab123cd", 1L, null)).thenReturn(car("AB123CD"));
 
         mvc.perform(post("/patentes")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"numero\":\"ab123cd\"}"))
+                .content("{\"numero\":\"ab123cd\",\"personId\":1}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.numero").value("AB123CD"));
     }
 
     @Test
     void validationAndDuplicatesHaveDistinctStatuses() throws Exception {
-        when(service.create("AB-123"))
+        when(service.create("AB-123", 1L, null))
                 .thenThrow(new LicensePlateException(Type.INVALID, "Formato inválido"));
-        when(service.create("ABC123"))
+        when(service.create("ABC123", 1L, null))
                 .thenThrow(new LicensePlateException(Type.DUPLICATE, "Ya existe"));
 
         mvc.perform(post("/patentes").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"numero\":\"AB-123\"}"))
+                .content("{\"numero\":\"AB-123\",\"personId\":1}"))
                 .andExpect(status().isBadRequest());
         mvc.perform(post("/patentes").contentType(MediaType.APPLICATION_JSON)
-                .content("{\"numero\":\"ABC123\"}"))
+                .content("{\"numero\":\"ABC123\",\"personId\":1}"))
                 .andExpect(status().isConflict());
         mvc.perform(post("/patentes").contentType(MediaType.APPLICATION_JSON)
                 .content("null"))
@@ -69,22 +69,22 @@ class LicensePlateControllerTests {
 
     @Test
     void csvImportReturnsCount() throws Exception {
-        when(service.importCsv(any())).thenReturn(2);
+        when(service.importCsv(any(), org.mockito.ArgumentMatchers.eq(1L))).thenReturn(2);
         MockMultipartFile file = new MockMultipartFile("archivo", "patentes.csv", "text/csv",
                 "ABC123\nAB123CD\n".getBytes(StandardCharsets.UTF_8));
 
-        mvc.perform(multipart("/patentes/importar").file(file))
+        mvc.perform(multipart("/patentes/importar").file(file).param("personId", "1"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.cantidad").value(2));
     }
 
     @Test
     void listsFindsUpdatesAndDeletesById() throws Exception {
-        LicensePlate plate = new LicensePlate("AB123CD");
+        Car plate = car("AB123CD");
         ReflectionTestUtils.setField(plate, "id", 7L);
         when(service.findAll()).thenReturn(List.of(plate));
         when(service.findById(7L)).thenReturn(plate);
-        LicensePlate updated = new LicensePlate("XY123");
+        Car updated = car("XY123");
         ReflectionTestUtils.setField(updated, "id", 7L);
         when(service.update(7L, "xy123")).thenReturn(updated);
 
@@ -115,5 +115,10 @@ class LicensePlateControllerTests {
         mvc.perform(put("/patentes/7").contentType(MediaType.APPLICATION_JSON)
                 .content("{\"numero\":\"AB123CD\"}"))
                 .andExpect(status().isConflict());
+    }
+    private Car car(String number) {
+        Car car = new Car();
+        car.setLicensePlate(number);
+        return car;
     }
 }
