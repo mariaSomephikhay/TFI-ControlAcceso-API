@@ -2,7 +2,6 @@ package com.unla.accesscontrol.controller;
 
 import java.util.List;
 
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,7 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.unla.accesscontrol.entities.Person;
-import com.unla.accesscontrol.repository.PersonRepository;
+import com.unla.accesscontrol.exceptions.PersonAlreadyExistsException;
+import com.unla.accesscontrol.service.PersonService;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
@@ -23,22 +23,18 @@ import jakarta.validation.constraints.Size;
 @RestController
 @RequestMapping("/people")
 public class PersonController {
-    private final PersonRepository people;
+    private final PersonService people;
 
-    public PersonController(PersonRepository people) {
+    public PersonController(PersonService people) {
         this.people = people;
     }
 
     @PostMapping
     public ResponseEntity<PersonDetails> create(@Valid @RequestBody CreatePerson request) {
-        Person person = new Person();
-        person.setFirstName(request.firstName());
-        person.setLastName(request.lastName());
-        person.setNationalId(request.nationalId());
-        person.setEmail(request.email());
         try {
-            return ResponseEntity.status(HttpStatus.CREATED).body(PersonDetails.from(people.saveAndFlush(person)));
-        } catch (DataIntegrityViolationException duplicate) {
+            Person person = people.create(request.firstName(), request.lastName(), request.nationalId(), request.email());
+            return ResponseEntity.status(HttpStatus.CREATED).body(PersonDetails.from(person));
+        } catch (PersonAlreadyExistsException duplicate) {
             return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
     }

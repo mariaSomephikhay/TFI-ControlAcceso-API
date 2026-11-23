@@ -192,18 +192,22 @@ java -jar target/TFI-ControlAcceso-API-0.0.1-SNAPSHOT.jar
 ```text
 src/main/java/com/unla/accesscontrol/
   AccessControlApplication.java  Entrada de Spring Boot
-  config/                     Configuración de patentes
+  config/                     Configuración de patentes y verificación del esquema
   controller/                 Endpoints de operadores, titulares y patentes
   dtos/                       Contratos HTTP de patentes
   entities/                   Entidades del modelo de acceso
   exceptions/                 Errores de negocio
   repository/                 Acceso a datos con Spring Data
-  service/                    Alta, autenticación y gestión de patentes
+  service/                    Interfaces de operadores, titulares y patentes
+    impl/                     Lógica de servicio y transacciones
 src/main/resources/
   application.properties      Configuración de la aplicación
 src/test/java/com/unla/accesscontrol/
   OperatorServiceTests.java
 ```
+
+Los controladores reciben las peticiones HTTP y llaman a las interfaces de servicio.
+Las implementaciones aplican las reglas de negocio y acceden a datos mediante repositorios.
 
 ## Alcance actual
 

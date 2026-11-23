@@ -10,7 +10,11 @@ public class LicensePlateException extends RuntimeException {
     private final Type type;
 
     public LicensePlateException(Type type, String message) {
-        super(message);
+        this(type, message, null);
+    }
+
+    public LicensePlateException(Type type, String message, Throwable cause) {
+        super(message, cause);
         this.type = type;
     }
 

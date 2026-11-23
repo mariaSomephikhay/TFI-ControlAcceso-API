@@ -23,7 +23,11 @@ public class UserException extends Exception {
 	
 	
 	public UserException(Type tipo) {
-        super(tipo.getMensaje());
+        this(tipo, null);
+    }
+
+    public UserException(Type tipo, Throwable cause) {
+        super(tipo.getMensaje(), cause);
         this.tipo = tipo;
     }
 

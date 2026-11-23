@@ -8,6 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +17,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.mock.web.MockMultipartFile;
 
 import com.unla.accesscontrol.config.LicensePlateProperties;
 import com.unla.accesscontrol.entities.Car;
@@ -27,6 +28,7 @@ import com.unla.accesscontrol.repository.PersonRepository;
 import com.unla.accesscontrol.repository.TrackingRepository;
 import com.unla.accesscontrol.service.CarService;
 import com.unla.accesscontrol.service.PlateInput;
+import com.unla.accesscontrol.service.impl.CarServiceImpl;
 
 class CarServiceTests {
     private static final LicensePlateProperties DEFAULT_PROPERTIES =
@@ -49,7 +51,7 @@ class CarServiceTests {
     }
 
     private CarService withInput(LicensePlateProperties properties, long bytes, int rows) {
-        return new CarService(repository, people, tracking, new PlateInput(properties, bytes, rows));
+        return new CarServiceImpl(repository, people, tracking, new PlateInput(properties, bytes, rows));
     }
 
     private Car car(String number) {
@@ -207,8 +209,7 @@ class CarServiceTests {
         verify(repository, never()).saveAllAndFlush(any());
     }
 
-    private MockMultipartFile csv(String content) {
-        return new MockMultipartFile("archivo", "patentes.csv", "text/csv",
-                content.getBytes(StandardCharsets.UTF_8));
+    private InputStream csv(String content) {
+        return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));
     }
 }
