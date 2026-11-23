@@ -24,3 +24,20 @@ conectada al origen. Si el destino ya recibió escrituras, reconciliarlas primer
 `POST /users/login` admite `cardUid` y el campo previo `id`, que resuelve un UID o un alias migrado.
 Para conservar ceros iniciales, el PIN se envía como cadena JSON. Los eventos de inicio de sesión
 se guardan en `authentication_events`, incluidos los registros copiados de `user_logs`.
+
+## 2. Patentes y titulares
+
+1. Con la API detenida, respaldar el destino de la etapa 1.
+2. En esa base, registrar los titulares reales en `people` con nombre, apellido, documento único
+   y las fechas de alta y actualización. Registrar el correo si está disponible.
+3. Cargar `sql/02-migrate-plates.sql` y completar `migration_plate_owner_map (plate_id, person_id)`
+   con un titular por cada patente de origen.
+4. Ejecutar `CALL migrate_legacy_plates();`. Verifica la correspondencia, conserva los IDs y
+   las fechas, y deja la tabla anterior como `legacy_license_plates`.
+5. Iniciar la versión del PR de patentes contra el destino y verificar las seis rutas de patentes.
+   El alta y la importación requieren `personId`. La consulta, la edición del número y la baja
+   conservan sus rutas y sus respuestas.
+
+Para revertir la etapa 2 antes de aceptar escrituras, restaurar el respaldo del destino en otra base
+y conectar la versión de la etapa 1. Si hubo escrituras, reconciliarlas antes de volver a esa versión.
+El esquema viejo y los respaldos pueden conservarse hasta terminar la conciliación.

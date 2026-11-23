@@ -9,6 +9,7 @@ API REST de gestión de usuarios y control de acceso, desarrollada con Spring Bo
 - Bloqueo del usuario al acumular tres contraseñas incorrectas.
 - Registro de los inicios de sesión exitosos en `authentication_events`.
 - Alta individual e importación CSV de patentes autorizadas.
+- Registro y consulta de titulares de autos.
 
 ## Tecnologías y requisitos
 
@@ -34,7 +35,7 @@ La configuración se encuentra en [application.properties](src/main/resources/ap
 
 La URL incluye `createDatabaseIfNotExist=true`: la conexión puede crear la base si el usuario tiene permisos. Hibernate crea o actualiza las tablas al iniciar la aplicación. MySQL debe estar ejecutándose antes de iniciar la API.
 
-El esquema de operadores usa `users.id` autogenerado y un `card_uid` único. Si ya existe una base con `users.user_id`, seguí la [guía de migración](docs/migration.md) para copiar usuarios, auditoría y patentes a una base nueva.
+El esquema usa `users.id` autogenerado y un `card_uid` único para operadores. Cada auto en `cars` apunta a su titular en `people`. Para migrar datos desde el esquema anterior, seguí las dos etapas de la [guía de migración](docs/migration.md).
 
 Para usar otra conexión sin modificar el archivo, configurar las variables de entorno en la misma terminal de PowerShell desde la que se ejecutará la aplicación:
 
@@ -116,18 +117,20 @@ Cada contraseña incorrecta incrementa `failedAttempts`. En el tercer fallo se d
 
 Los intentos fallidos se acumulan incluso después de un login exitoso. Cada login exitoso genera un registro en `authentication_events`.
 
+### Registrar titulares
+
+`POST /people` recibe `firstName`, `lastName`, `nationalId` y un `email` opcional. Devuelve `201` con el titular y su ID. Un documento ya registrado devuelve `409`. `GET /people` lista titulares y `GET /people/{id}` consulta uno.
+
 ### Cargar patentes
 
-Las clases y la tabla usan `LicensePlate` y `license_plates`. La ruta HTTP y los campos JSON mantienen los nombres anteriores para conservar la compatibilidad con los clientes existentes.
-
-La carga individual recibe una patente en JSON y devuelve el número guardado, normalizado en mayúsculas:
+La carga individual guarda un `Car` con el titular indicado por `personId`. El campo `description` es opcional.
 
 ```powershell
-$body = @{ numero = 'ab123cd' } | ConvertTo-Json
+$body = @{ numero = 'ab123cd'; personId = 1 } | ConvertTo-Json
 Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/patentes' -ContentType 'application/json' -Body $body
 ```
 
-`POST /patentes` responde `201 Created` con `{"numero":"AB123CD"}`. Por defecto acepta letras latinas A-Z y números 0-9, de 1 a 16 caracteres. Elimina espacios al principio y al final; rechaza espacios internos, guiones, símbolos y valores vacíos con `400 Bad Request`. Una patente ya cargada, incluso con otra combinación de mayúsculas y minúsculas, devuelve `409 Conflict`.
+`POST /patentes` responde `201 Created` con `{"numero":"AB123CD"}`. Una patente inválida o la falta de `personId` devuelve `400`, un titular inexistente devuelve `404` y una patente duplicada devuelve `409`. Por defecto se aceptan letras A–Z y números 0–9, de 1 a 16 caracteres, después de quitar espacios externos y convertir a mayúsculas.
 
 Los formatos permitidos se configuran como una lista en `application.properties`, usando índices consecutivos. La patente debe coincidir por completo con **al menos uno** de los patrones, después de normalizarla a mayúsculas. El valor predeterminado es `license-plates.patterns[0]=[A-Z0-9]{1,16}`. Para permitir dos formatos específicos, reemplazarlo por:
 
@@ -138,7 +141,7 @@ license-plates.patterns[1]=[0-9]{3}[A-Z]{2}
 
 La aplicación no inicia si la lista está vacía o contiene una expresión regular inválida. Esta misma configuración se aplica a la carga individual y a cada fila del CSV.
 
-Para importar varias patentes, enviar un archivo CSV UTF-8 de **una columna** al campo `archivo` de `POST /patentes/importar`. Puede incluir una primera línea `patente`; después lleva una patente por línea:
+Para importar varias patentes, enviar un CSV UTF-8 de **una columna** en `archivo` y el `personId` del titular de todo el lote a `POST /patentes/importar`. El archivo admite una cabecera opcional `patente`.
 
 ```text
 patente
@@ -149,7 +152,7 @@ AB123CD
 Ejemplo en PowerShell:
 
 ```powershell
-curl.exe -F "archivo=@patentes.csv;type=text/csv" http://localhost:8080/patentes/importar
+curl.exe -F "archivo=@patentes.csv;type=text/csv" -F "personId=1" http://localhost:8080/patentes/importar
 ```
 
 La respuesta exitosa es `201 Created` con `{"cantidad":2}`. Por defecto, el archivo admite hasta 100000 bytes y 1000 patentes; esos límites se ajustan mediante `license-plates.import.max-file-bytes` y `license-plates.import.max-rows` en `application.properties`. Se validan todas las filas y se detectan duplicados tanto dentro del archivo como en la base antes de guardar; si alguna falla, no se importa ninguna. Los errores de formato devuelven `400`, los duplicados `409` y los archivos que exceden el límite de carga de Spring `413`.
@@ -158,9 +161,9 @@ La respuesta exitosa es `201 Created` con `{"cantidad":2}`. Por defecto, el arch
 
 `GET /patentes` lista las patentes con `id`, `numero`, `createdAt` y `updatedAt`; `GET /patentes/{id}` devuelve una sola. La lista vacía responde `200 OK` con `[]`, y un ID inexistente responde `404 Not Found`.
 
-`PUT /patentes/{id}` recibe el mismo JSON que el alta (`{"numero":"AB123CD"}`), normaliza y valida el número, y devuelve la patente actualizada. Responde `400` para un formato inválido, `409` si el número pertenece a otra patente y `404` si el ID no existe. `DELETE /patentes/{id}` responde `204 No Content` al borrar y `404` si el ID no existe.
+`PUT /patentes/{id}` recibe `{"numero":"AB123CD"}`, normaliza y actualiza el número. Conserva el titular y responde `400` para un formato inválido, `409` por duplicado y `404` si el ID no existe. `DELETE /patentes/{id}` responde `204` al borrar y `404` si el ID no existe. La baja desvincula el auto de las estadías y conserva la patente detectada, las fechas y la marca que indica si estaba registrada.
 
-La gestión de tarjetas y la validación de acceso siguen pendientes. Estos endpoints aún no tienen protección de autenticación.
+La validación automática de acceso y el archivo de estadías siguen pendientes. Estos endpoints aún no tienen protección de autenticación.
 
 ## Compilación y pruebas
 
@@ -188,18 +191,14 @@ java -jar target/TFI-ControlAcceso-API-0.0.1-SNAPSHOT.jar
 
 ```text
 src/main/java/com/unla/gestionUsuario/
-  controller/                 Endpoints REST
-  dtos/                       Datos de las peticiones
-  entities/                   Entidad LicensePlate
+  config/                     Configuración de patentes
+  dtos/                       Contratos HTTP de patentes
   exceptions/                 Errores de negocio
-  repository/                 Acceso a datos con Spring Data
-  service/                    Interfaz del servicio
-  services/implementations/   Gestión de patentes
 src/main/java/com/unla/accesscontrol/
-  controller/                 Endpoints de operadores
+  controller/                 Endpoints de operadores, titulares y patentes
   entities/                   Entidades del nuevo modelo
-  repository/                 Acceso a datos de operadores
-  service/                    Alta y autenticación de operadores
+  repository/                 Acceso a datos con Spring Data
+  service/                    Alta, autenticación y gestión de patentes
 src/main/resources/
   application.properties      Configuración de la aplicación
 src/test/java/com/unla/gestionUsuario/
