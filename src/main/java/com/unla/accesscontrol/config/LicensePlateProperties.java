@@ -1,4 +1,4 @@
-package com.unla.gestionUsuario.config;
+package com.unla.accesscontrol.config;
 
 import java.util.List;
 

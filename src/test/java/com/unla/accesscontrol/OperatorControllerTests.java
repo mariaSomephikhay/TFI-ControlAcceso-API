@@ -1,4 +1,4 @@
-package com.unla.gestionUsuario;
+package com.unla.accesscontrol;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -10,7 +10,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import com.unla.accesscontrol.controller.OperatorController;
 import com.unla.accesscontrol.service.OperatorService;
-import com.unla.gestionUsuario.exceptions.UserException;
+import com.unla.accesscontrol.exceptions.UserException;
 
 class OperatorControllerTests {
     private final OperatorService service = mock(OperatorService.class);

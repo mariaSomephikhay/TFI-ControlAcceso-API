@@ -1,4 +1,4 @@
-package com.unla.gestionUsuario;
+package com.unla.accesscontrol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -13,7 +13,7 @@ import org.springframework.core.env.MapPropertySource;
 import org.springframework.core.env.StandardEnvironment;
 import org.springframework.core.io.support.ResourcePropertySource;
 
-import com.unla.gestionUsuario.config.LicensePlateProperties;
+import com.unla.accesscontrol.config.LicensePlateProperties;
 
 class LicensePlatePropertiesTests {
     @Test

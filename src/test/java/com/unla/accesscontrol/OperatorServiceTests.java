@@ -1,4 +1,4 @@
-package com.unla.gestionUsuario;
+package com.unla.accesscontrol;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -15,8 +15,8 @@ import com.unla.accesscontrol.repository.AuthenticationEventRepository;
 import com.unla.accesscontrol.repository.LegacyOperatorIdRepository;
 import com.unla.accesscontrol.repository.OperatorRepository;
 import com.unla.accesscontrol.service.OperatorService;
-import com.unla.gestionUsuario.exceptions.UserException;
-import com.unla.gestionUsuario.exceptions.UserException.Type;
+import com.unla.accesscontrol.exceptions.UserException;
+import com.unla.accesscontrol.exceptions.UserException.Type;
 
 class OperatorServiceTests {
     private final OperatorRepository users = mock(OperatorRepository.class);

@@ -8,8 +8,8 @@ import com.unla.accesscontrol.entities.User;
 import com.unla.accesscontrol.repository.AuthenticationEventRepository;
 import com.unla.accesscontrol.repository.LegacyOperatorIdRepository;
 import com.unla.accesscontrol.repository.OperatorRepository;
-import com.unla.gestionUsuario.exceptions.UserException;
-import com.unla.gestionUsuario.exceptions.UserException.Type;
+import com.unla.accesscontrol.exceptions.UserException;
+import com.unla.accesscontrol.exceptions.UserException.Type;
 
 @Service
 public class OperatorService {

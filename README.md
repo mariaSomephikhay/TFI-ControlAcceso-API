@@ -190,22 +190,20 @@ java -jar target/TFI-ControlAcceso-API-0.0.1-SNAPSHOT.jar
 ## Estructura
 
 ```text
-src/main/java/com/unla/gestionUsuario/
-  config/                     Configuración de patentes
-  dtos/                       Contratos HTTP de patentes
-  exceptions/                 Errores de negocio
 src/main/java/com/unla/accesscontrol/
+  AccessControlApplication.java  Entrada de Spring Boot
+  config/                     Configuración de patentes
   controller/                 Endpoints de operadores, titulares y patentes
-  entities/                   Entidades del nuevo modelo
+  dtos/                       Contratos HTTP de patentes
+  entities/                   Entidades del modelo de acceso
+  exceptions/                 Errores de negocio
   repository/                 Acceso a datos con Spring Data
   service/                    Alta, autenticación y gestión de patentes
 src/main/resources/
   application.properties      Configuración de la aplicación
-src/test/java/com/unla/gestionUsuario/
+src/test/java/com/unla/accesscontrol/
   OperatorServiceTests.java
 ```
-
-Los paquetes Java y la clase principal conservan el nombre `gestionUsuario` del proyecto de origen.
 
 ## Alcance actual
 

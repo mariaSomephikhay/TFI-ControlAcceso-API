@@ -13,9 +13,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.unla.gestionUsuario.config.LicensePlateProperties;
-import com.unla.gestionUsuario.exceptions.LicensePlateException;
-import com.unla.gestionUsuario.exceptions.LicensePlateException.Type;
+import com.unla.accesscontrol.config.LicensePlateProperties;
+import com.unla.accesscontrol.exceptions.LicensePlateException;
+import com.unla.accesscontrol.exceptions.LicensePlateException.Type;
 
 @Component
 public class PlateInput {

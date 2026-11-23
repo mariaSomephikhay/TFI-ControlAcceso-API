@@ -1,4 +1,4 @@
-package com.unla.gestionUsuario.dtos;
+package com.unla.accesscontrol.dtos;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 

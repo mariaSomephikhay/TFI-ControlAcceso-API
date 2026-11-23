@@ -1,4 +1,4 @@
-package com.unla.gestionUsuario;
+package com.unla.accesscontrol;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -17,11 +17,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.mock.web.MockMultipartFile;
 
-import com.unla.gestionUsuario.config.LicensePlateProperties;
+import com.unla.accesscontrol.config.LicensePlateProperties;
 import com.unla.accesscontrol.entities.Car;
 import com.unla.accesscontrol.entities.Person;
-import com.unla.gestionUsuario.exceptions.LicensePlateException;
-import com.unla.gestionUsuario.exceptions.LicensePlateException.Type;
+import com.unla.accesscontrol.exceptions.LicensePlateException;
+import com.unla.accesscontrol.exceptions.LicensePlateException.Type;
 import com.unla.accesscontrol.repository.CarRepository;
 import com.unla.accesscontrol.repository.PersonRepository;
 import com.unla.accesscontrol.repository.TrackingRepository;
