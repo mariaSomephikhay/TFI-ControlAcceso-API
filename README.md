@@ -9,6 +9,7 @@ API REST de gestión de usuarios y control de acceso, desarrollada con Spring Bo
 - Bloqueo del usuario al acumular tres contraseñas incorrectas.
 - Registro de los inicios de sesión exitosos en la tabla `user_logs`.
 - Alta individual e importación CSV de patentes autorizadas.
+- Alta, consulta y desactivación de tarjetas asociadas a usuarios.
 
 ## Tecnologías y requisitos
 
@@ -34,9 +35,9 @@ La configuración se encuentra en [application.properties](src/main/resources/ap
 
 La URL incluye `createDatabaseIfNotExist=true`: la conexión puede crear la base si el usuario tiene permisos. Hibernate crea o actualiza las tablas al iniciar la aplicación. MySQL debe estar ejecutándose antes de iniciar la API.
 
-Las tablas de la aplicación se llaman `license_plates`, `users` y `user_logs`. En una base nueva, Hibernate las crea al iniciar la aplicación. `ddl-auto=update` conserva los datos entre ejecuciones, pero no renombra tablas ni columnas de versiones anteriores; una base existente con el esquema viejo requiere una migración manual para conservar sus registros.
+Las tablas de la aplicación se llaman `license_plates`, `users`, `user_logs` y `cards`. En una base nueva, Hibernate las crea al iniciar la aplicación. `ddl-auto=update` conserva los datos entre ejecuciones, pero no renombra tablas ni columnas de versiones anteriores; una base existente con el esquema viejo requiere una migración manual para conservar sus registros.
 
-`license_plates.id` y `user_logs.id` se generan automáticamente. En `users`, el identificador de acceso `user_id` ya es la clave primaria. Las tres entidades completan `created_at` y `updated_at` mediante `@CreationTimestamp` y `@UpdateTimestamp`.
+`license_plates.id`, `user_logs.id` y `cards.id` se generan automáticamente. En `users`, el identificador de acceso `user_id` ya es la clave primaria. Las cuatro entidades completan `created_at` y `updated_at` mediante `@CreationTimestamp` y `@UpdateTimestamp`. Cada tarjeta guarda el `user_id` de su dueño; un usuario puede tener varias tarjetas.
 
 Para usar otra conexión sin modificar el archivo, configurar las variables de entorno en la misma terminal de PowerShell desde la que se ejecutará la aplicación:
 
@@ -167,7 +168,22 @@ La respuesta exitosa es `201 Created` con `{"cantidad":2}`. Por defecto, el arch
 
 `PUT /patentes/{id}` recibe el mismo JSON que el alta (`{"numero":"AB123CD"}`), normaliza y valida el número, y devuelve la patente actualizada. Responde `400` para un formato inválido, `409` si el número pertenece a otra patente y `404` si el ID no existe. `DELETE /patentes/{id}` responde `204 No Content` al borrar y `404` si el ID no existe.
 
-La gestión de tarjetas y la validación de acceso siguen pendientes. Estos endpoints aún no tienen protección de autenticación.
+La validación de acceso sigue pendiente. Estos endpoints aún no tienen protección de autenticación.
+
+### Tarjetas de usuarios
+
+`POST /users/{userId}/cards` recibe `{"code":"AB12"}` y responde `201 Created` con `id`, `code`, `userId`, `active`, `createdAt` y `updatedAt`. El código se guarda sin espacios al principio o al final y en mayúsculas; debe tener entre 1 y 64 caracteres y ser único en todas las tarjetas. Un código repetido devuelve `409 Conflict`, un código vacío o demasiado largo devuelve `400 Bad Request` y un usuario inexistente devuelve `404 Not Found`.
+
+`GET /users/{userId}/cards` devuelve todas sus tarjetas, incluidas las inactivas, o `[]` si aún no tiene ninguna. `PATCH /users/{userId}/cards/{cardId}/deactivate` marca la tarjeta como inactiva sin borrarla; repetir la operación deja la tarjeta inactiva. Si la tarjeta no existe o pertenece a otro usuario, responde `404 Not Found`.
+
+```powershell
+$body = @{ code = 'ab12' } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri 'http://localhost:8080/users/usuario_demo/cards' -ContentType 'application/json' -Body $body
+Invoke-RestMethod -Method Get -Uri 'http://localhost:8080/users/usuario_demo/cards'
+Invoke-RestMethod -Method Patch -Uri 'http://localhost:8080/users/usuario_demo/cards/1/deactivate'
+```
+
+La captura de tarjetas desconocidas y la autorización de ingresos se implementarán en tareas posteriores.
 
 ## Compilación y pruebas
 
@@ -183,7 +199,7 @@ En Linux o macOS:
 sh mvnw clean verify
 ```
 
-Las pruebas de usuarios verifican el alta con estado inicial, el registro de un login exitoso, el bloqueo tras tres fallos, el rechazo de usuarios inexistentes y el mapper de credenciales. Las pruebas de patentes cubren normalización, formatos inválidos, duplicados, importación, consulta, modificación, baja y respuestas HTTP. Utilizan repositorios simulados y no requieren MySQL; no prueban la conexión real a la base.
+Las pruebas de usuarios verifican el alta con estado inicial, el registro de un login exitoso, el bloqueo tras tres fallos, el rechazo de usuarios inexistentes y el mapper de credenciales. Las pruebas de patentes cubren normalización, formatos inválidos, duplicados, importación, consulta, modificación, baja y respuestas HTTP. Las pruebas de tarjetas cubren asociación de varias tarjetas, códigos duplicados, desactivación, pertenencia al usuario y respuestas HTTP. Utilizan repositorios simulados y no requieren MySQL; no prueban la conexión real a la base.
 
 El proceso genera un JAR ejecutable:
 
@@ -197,7 +213,7 @@ java -jar target/TFI-ControlAcceso-API-0.0.1-SNAPSHOT.jar
 src/main/java/com/unla/gestionUsuario/
   controller/                 Endpoints REST
   dtos/                       Datos de las peticiones
-  entities/                   Entidades User, UserLog y LicensePlate
+  entities/                   Entidades User, UserLog, LicensePlate y Card
   exceptions/                 Errores de negocio
   mapper/                     Conversión entre DTO y entidad
   repository/                 Acceso a datos con Spring Data
